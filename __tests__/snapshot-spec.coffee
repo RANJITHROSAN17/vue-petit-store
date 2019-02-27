@@ -7,7 +7,8 @@ localVue.use Vuex
 localVue.use VueRouter
 
 component = require './index-spec.vue'
-router = new VueRouter()
+router = new VueRouter
+  mode: 'history'
 store = new Vuex.Store
   modules:
     index:
@@ -40,7 +41,9 @@ describe "pushState", =>
 
     # state swap
     vm.swap()
-    expect( location.hash ).toEqual "#/?c=f&d=e&e=d&f=c"
+    expect( location.hash ).toEqual ""
+    expect( location.pathname ).toEqual "/"
+    expect( location.search ).toEqual "?c=f&d=e&e=d&f=c"
     expect( document.cookie ).toEqual "i=h"
     expect( sessionStorage.getItem "g" ).toEqual "j"
     expect( localStorage.getItem "h" ).toEqual "i"
