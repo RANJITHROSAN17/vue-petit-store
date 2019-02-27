@@ -28,23 +28,6 @@
   ],
   "preferGlobal": true,
   "private": false,
-  "jest": {
-    "testRegex": "/__tests__/.*\\-spec.coffee$",
-    "moduleFileExtensions": [
-      "coffee",
-      "js"
-    ],
-    "moduleDirectories": [
-      "node_modules",
-      "."
-    ],
-    "transform": {
-      "^.+\\.coffee$": "<rootDir>/config/coffee-jest.js",
-      "^.+\\.js$": "babel-jest",
-      "^.+\\.pug$": "pug-jest",
-      "^.+\\.vue$": "vue-jest"
-    }
-  },
   "devDependencies": {
     "@babel/core": "^7.3.4",
     "@babel/plugin-transform-modules-commonjs": "^7.2.0",
@@ -74,7 +57,7 @@
     "test": "run-s make jest",
     "make": "run-p make:*",
     "make:index": "webpack --config config/webpack-index.coffee",
-    "jest": "jest -u",
+    "jest": "jest -u --config config/jest.js --rootDir .",
     "bench": "node test --bench",
     "preversion": "npm run build && (git diff --quiet || git commit -am 'minify')",
     "g": "run-p -n g:*",
