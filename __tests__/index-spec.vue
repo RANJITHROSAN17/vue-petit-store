@@ -2,6 +2,13 @@
 div
   span {{ a }}
   span {{ b }}
+  span {{ c }}
+  span {{ d }}
+  span {{ e }}
+  span {{ f }}
+  span {{ g }}
+  span {{ h }}
+  span {{ i }}
 </template>
 
 <script lang="coffee">
@@ -14,6 +21,27 @@ module.exports =
   mixins: [
     vuex      "index", ["a"]
     vuex_read "index", ["b"]
+    pushState "c"
+    pushState "d"
+    replaceState "e"
+    replaceState "f"
+    sessionStorage "g"
+    localStorage "h"
+    cookie "i"
   ]
+
+  data: ->
+    c: "c"
+    d: "d"
+    e: "e"
+    f: "f"
+    g: "g"
+    h: "h"
+    i: "i"
+
+  methods:
+    swap: ->
+      [@c, @d, @e, @f] = [@f, @e, @d, @c]
+      [@g, @h, @i] = [@i, @h, @g]
 </script>
 
