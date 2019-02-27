@@ -16,8 +16,6 @@ div
 { replaceState, pushState, sessionStorage, localStorage, cookie,
   firestore_models, firestore_model, firestore_collection, firestore_doc,
   vuex_read, vuex,
-  tempo,
-  path_by,
 } = require "../lib/index.min"
 
 module.exports =

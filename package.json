@@ -1,6 +1,6 @@
 {
   "name": "vue-petit-store",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "petit store for vue mixin",
   "main": "lib/index.min.js",
   "repository": "git@github.com:7korobi/vue-petit-store.git",
@@ -50,7 +50,6 @@
     "@babel/plugin-transform-modules-commonjs": "^7.2.0",
     "@nuxt/babel-preset-app": "^2.4.5",
     "@vue/test-utils": "^1.0.0-beta.29",
-    "autoprefixer": "^9.4.9",
     "babel-core": "^6.26.3",
     "babel-jest": "^24.1.0",
     "babel-loader": "^8.0.5",
@@ -58,7 +57,6 @@
     "clean-webpack-plugin": "^1.0.1",
     "coffee-loader": "^0.9.0",
     "coffeescript": "^2.3.2",
-    "firebase": "^5.8.4",
     "jest": "^24.1.0",
     "npm-run-all": "^4.1.5",
     "pug-jest": "^1.0.1",
@@ -84,6 +82,7 @@
     "g:npm": "npm install -g npm-check-updates"
   },
   "dependencies": {
+    "firebase": "^5.8.4",
     "memory-orm": "^0.2.0"
   }
 }
