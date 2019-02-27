@@ -113,7 +113,7 @@ module.exports = {
 ``` javascript
 module.exports = {
   mixins: [
-    firestore_doc("sign", function() { return this.user && "user/#{ @user.uid }" })
+    firestore_doc("sign", function() { return this.user && `user/${ this.user.uid }` })
   ],
   data () {
     return {
