@@ -4,8 +4,7 @@ _ = require "lodash"
 
 firestore = ->
   store = firebase.firestore()
-  store.settings
-    timestampsInSnapshots: true
+  store.settings {}
   store
 
 joinSnapshot = (target, shot)->
@@ -96,7 +95,6 @@ module.exports = m =
         @_firestore.collection path
       shot: (qs)->
         qs.docChanges().forEach ({ newIndex, oldIndex, type, doc })=>
-          console.log { type, newIndex, oldIndex }
           switch type
             when 'added', 'modified'
               Set[set_key].add doc.data()
@@ -139,7 +137,6 @@ module.exports = m =
             when 'added', 'modified'
               @[id][doc.id] = doc.data()
             when 'removed'
-              console.log doc.data()
               delete @[id][doc.id]
 
   firestore_doc: (id, path)->

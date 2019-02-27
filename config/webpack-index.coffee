@@ -9,7 +9,18 @@ current = process.cwd()
 
 coffee =
   test: /\.coffee$/
-  use: ['babel-loader', 'coffee-loader']
+  loader: 'coffee-loader'
+  options:
+    transpile:
+      plugins: [
+        "@babel/plugin-transform-modules-commonjs"
+      ]
+      presets: [
+        ["env", 
+          targets:
+            node: "6.11.5"
+        ]
+      ]
 
 module.exports =
   mode: 'production'
