@@ -1,3 +1,4 @@
+_ = require 'lodash'
 
 relative_to = ({ name, params, query, hash }, o, is_replace)->
   unless is_replace
