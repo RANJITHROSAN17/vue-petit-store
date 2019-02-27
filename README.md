@@ -30,6 +30,7 @@ const { replaceState, pushState, sessionStorage, localStorage, cookie,
 } = require("vue-petit-store")
 ```
 
+### example 1
 ``` javascript
 module.exports = {
   mixins: [
@@ -64,6 +65,7 @@ module.exports = {
   vm.phase  | require("memory-orm").Query.phases.find(vm.phase_id)
   vm.chat   | require("memory-orm").Query.chats.find(vm.chat_id)
 
+### example 2
 
 ``` javascript
 module.exports = {
@@ -88,6 +90,7 @@ module.exports = {
   vm.page_by_default | 30
 
 
+### example 3
 
 ``` javascript
 module.exports = {
@@ -104,6 +107,8 @@ module.exports = {
   vm.user = { test: 'test' } | vm.$store.commit("firebase/update", { user: { test: 'test' }})
   vm.credential = { test: 'test' } | vm.$store.commit("firebase/update", { credential: { test: 'test' }})
 
+
+### example 4
 
 ``` javascript
 module.exports = {
@@ -137,6 +142,7 @@ module.exports = {
   vm.sign_default | { sign: '', introduction: '' }
   vm.sign_path | "user/TEST_UID"
 
+### example 5
 
 ``` javascript
 module.exports = {
@@ -172,5 +178,5 @@ module.exports = {
   vm.markers_default | Query
   vm.markers_path | "marker"
   vm.markers_chk | true ("TEST_UID" && "a-1-1")
-  vm.markers_query | vm.markers_snap.where('uid','==','TEST_UID').where('part_id','==','a-1-1')
+  vm.markers_query | vm.markers_snap.where('uid','\=\=','TEST_UID').where('part_id','\=\=','a-1-1')
 
