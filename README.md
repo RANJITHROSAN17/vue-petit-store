@@ -145,7 +145,44 @@ module.exports = {
   vm.sign_default | { sign: '', introduction: '' }
   vm.sign_path | "user/TEST_UID"
 
+
 ### example 5
+
+``` javascript
+module.exports = {
+  mixins: [
+    firestore_collection("markers",
+      function () { return "marker" }
+      function () { return this.uid && this.part_id }
+      function (ref) { return ref.where('uid','==', this.uid ).where('part_id','==', this.part_id ) }
+  ],
+  data () {
+    return {
+      uid: "TEST_UID"
+      part_id: "a-1-1"
+      markers: {}
+    }
+  }
+}
+```
+
+  helper method | description
+  :-- | :--
+  vm.marker_join | join with event handler
+  vm.markers_del | delete id from snapshot
+  vm.markers_add | append doc to snapshot
+
+  property | description
+  :-- | :--
+  vm.markers | firestore sync here. vm.markers[doc_id] = doc_data
+  vm.markers_snap | firestore collection at "marker"
+  vm.markers_default | Query
+  vm.markers_path | "marker"
+  vm.markers_chk | true ("TEST_UID" && "a-1-1")
+  vm.markers_query | vm.markers_snap.where('uid','\=\=','TEST_UID').where('part_id','\=\=','a-1-1')
+
+
+### example 6
 
 ``` javascript
 module.exports = {
@@ -177,6 +214,7 @@ module.exports = {
 
   property | description
   :-- | :--
+  vm.markers | Query.markers.own("TEST_UID")
   vm.markers_snap | firestore collection at "marker"
   vm.markers_default | Query
   vm.markers_path | "marker"
