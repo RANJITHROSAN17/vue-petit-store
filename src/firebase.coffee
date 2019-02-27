@@ -1,6 +1,8 @@
-firebase = require "firebase"
 { State, Set } = require "memory-orm"
 _ = require "lodash"
+
+if window?
+  firebase = require "firebase"
 
 firestore = ->
   store = firebase.firestore()
