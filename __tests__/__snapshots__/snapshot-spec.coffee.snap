@@ -1,40 +1,5 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`pushState snapshot 1`] = `
-Object {
-  "fullPath": "/",
-  "hash": "",
-  "matched": Array [],
-  "meta": Object {},
-  "name": null,
-  "params": Object {},
-  "path": "/",
-  "query": Object {},
-}
-`;
+exports[`pushState snapshot 1`] = `"<div><span>a</span><span>b</span><span>c</span><span>d</span><span>e</span><span>f</span><span>g</span><span>h</span><span>i</span><span>j</span></div>"`;
 
-exports[`pushState snapshot 2`] = `"<div><span>a</span><span>b</span><span>c</span><span>d</span><span>e</span><span>f</span><span>g</span><span>h</span><span>i</span></div>"`;
-
-exports[`pushState snapshot 3`] = `"<div><span>b</span><span>a</span><span>c</span><span>d</span><span>e</span><span>f</span><span>g</span><span>h</span><span>i</span></div>"`;
-
-exports[`pushState snapshot 4`] = `"<div><span>local_changed_a</span><span>a</span><span>c</span><span>d</span><span>e</span><span>f</span><span>g</span><span>h</span><span>i</span></div>"`;
-
-exports[`pushState snapshot 5`] = `
-Object {
-  "fullPath": "/",
-  "hash": "",
-  "matched": Array [],
-  "meta": Object {},
-  "name": null,
-  "params": Object {},
-  "path": "/",
-  "query": Object {
-    "c": "f",
-    "d": "e",
-    "e": "d",
-    "f": "c",
-  },
-}
-`;
-
-exports[`pushState snapshot 6`] = `"<div><span>local_changed_a</span><span>a</span><span>f</span><span>e</span><span>d</span><span>c</span><span>i</span><span>h</span><span>g</span></div>"`;
+exports[`pushState snapshot 2`] = `"<div><span>A</span><span>a</span><span>f</span><span>e</span><span>d</span><span>c</span><span>j</span><span>i</span><span>h</span><span>g</span></div>"`;

@@ -25,19 +25,25 @@ describe "pushState", =>
   test 'snapshot', =>
     wrapper = mount component, { localVue, router, store }
     { vm } = wrapper
+
     # base state
-    expect( vm.$route ).toMatchSnapshot()
     expect( wrapper.html() ).toMatchSnapshot()
 
     # vuex swap
     store.commit 'index/swap'
-    expect( wrapper.html() ).toMatchSnapshot()
+    expect([vm.a, vm.b]).toEqual ["b","a"]
 
     # vuex update
-    vm.a = "local_changed_a"
-    expect( wrapper.html() ).toMatchSnapshot()
+    wrapper2 = mount component, { localVue, router, store }
+    wrapper2.vm.a = "A"
+    expect(vm.a).toEqual "A"
 
     # state swap
     vm.swap()
-    expect( vm.$route ).toMatchSnapshot()
+    expect( location.hash ).toEqual "#/?c=f&d=e&e=d&f=c"
+    expect( document.cookie ).toEqual "i=h"
+    expect( sessionStorage.getItem "g" ).toEqual "j"
+    expect( localStorage.getItem "h" ).toEqual "i"
+
+    # finish state
     expect( wrapper.html() ).toMatchSnapshot()

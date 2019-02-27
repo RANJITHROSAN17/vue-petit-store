@@ -9,12 +9,15 @@ div
   span {{ g }}
   span {{ h }}
   span {{ i }}
+  span {{ j }}
 </template>
 
 <script lang="coffee">
 { replaceState, pushState, sessionStorage, localStorage, cookie,
   firestore_models, firestore_model, firestore_collection, firestore_doc,
-  path_by, vuex_read, vuex
+  vuex_read, vuex,
+  tempo,
+  path_by,
 } = require "../lib/index.min"
 
 module.exports =
@@ -38,10 +41,12 @@ module.exports =
     g: "g"
     h: "h"
     i: "i"
+    j: "j"
 
   methods:
     swap: ->
       [@c, @d, @e, @f] = [@f, @e, @d, @c]
-      [@g, @h, @i] = [@i, @h, @g]
+      [@g, @h, @i, @j] = [@j, @i, @h, @g]
+
 </script>
 
