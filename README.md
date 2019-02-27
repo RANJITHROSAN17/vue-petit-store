@@ -23,6 +23,9 @@ yarn add vue-petit-store
   vuex | path, keys | sync vm[id] with vuex work on update mutation
   path_by | id, [id1, id2, ...] | (see examples)
 
+
+## examples
+
 ``` javascript
 const { replaceState, pushState, sessionStorage, localStorage, cookie,
   firestore_models, firestore_model, firestore_collection, firestore_doc,
