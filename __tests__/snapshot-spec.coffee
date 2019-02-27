@@ -22,12 +22,14 @@ store = new Vuex.Store
         swap: (state)->
           [state.b, state.a] = [state.a, state.b]
 
-describe "pushState", =>
+describe "", =>
   test 'snapshot', =>
     wrapper = mount component, { localVue, router, store }
     { vm } = wrapper
 
     # base state
+    map = ( vm[c] for c in "abcdefghij" )
+    expect( map ).toMatchSnapshot()
     expect( wrapper.html() ).toMatchSnapshot()
 
     # vuex swap
@@ -41,12 +43,13 @@ describe "pushState", =>
 
     # state swap
     vm.swap()
-    expect( location.hash ).toEqual ""
+
+    map = ( vm[c] for c in "abcdefghij" )
+    expect( map ).toMatchSnapshot()
+    expect( wrapper.html() ).toMatchSnapshot()
     expect( location.pathname ).toEqual "/"
     expect( location.search ).toEqual "?c=f&d=e&e=d&f=c"
+    expect( location.hash ).toEqual ""
     expect( document.cookie ).toEqual "i=h"
     expect( sessionStorage.getItem "g" ).toEqual "j"
     expect( localStorage.getItem "h" ).toEqual "i"
-
-    # finish state
-    expect( wrapper.html() ).toMatchSnapshot()

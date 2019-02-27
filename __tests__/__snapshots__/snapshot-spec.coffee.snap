@@ -1,5 +1,35 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`pushState snapshot 1`] = `"<div><span>a</span><span>b</span><span>c</span><span>d</span><span>e</span><span>f</span><span>g</span><span>h</span><span>i</span><span>j</span></div>"`;
+exports[`snapshot 1`] = `
+Array [
+  "a",
+  "b",
+  "c",
+  "d",
+  "e",
+  "f",
+  "g",
+  "h",
+  "i",
+  "j",
+]
+`;
 
-exports[`pushState snapshot 2`] = `"<div><span>A</span><span>a</span><span>f</span><span>e</span><span>d</span><span>c</span><span>j</span><span>i</span><span>h</span><span>g</span></div>"`;
+exports[`snapshot 2`] = `"<div><span>a</span><span>b</span><span>c</span><span>d</span><span>e</span><span>f</span><span>g</span><span>h</span><span>i</span><span>j</span></div>"`;
+
+exports[`snapshot 3`] = `
+Array [
+  "A",
+  "a",
+  "f",
+  "e",
+  "d",
+  "c",
+  "j",
+  "i",
+  "h",
+  "g",
+]
+`;
+
+exports[`snapshot 4`] = `"<div><span>A</span><span>a</span><span>f</span><span>e</span><span>d</span><span>c</span><span>j</span><span>i</span><span>h</span><span>g</span></div>"`;
