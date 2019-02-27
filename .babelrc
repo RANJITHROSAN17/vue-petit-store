@@ -1,0 +1,11 @@
+{
+  "plugins": [
+    "@babel/plugin-transform-modules-commonjs"
+  ],
+  "presets": [["@nuxt/babel-preset-app", { "modules": false }]],
+  "env": {
+    "test": {
+      "presets": [["@nuxt/babel-preset-app", { "targets": { "node": "current" } }]]
+    }
+  }
+}
