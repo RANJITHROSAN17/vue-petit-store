@@ -1,5 +1,4 @@
-{ State, Set } = require "memory-orm"
-_ = require "lodash"
+Mem = require "memory-orm"
 
 if window?
   firebase = require "firebase"
@@ -41,7 +40,7 @@ firestore_base = (id, path, chk, query, { del, add, snap, shot })->
   join = joinSnapshot join_target, shot
 
   data: ->
-    step: State.step
+    step: Mem.State.step
 
   mounted: ->
     @[default_id] = @[id]
@@ -99,9 +98,9 @@ module.exports = m =
         qs.docChanges().forEach ({ newIndex, oldIndex, type, doc })=>
           switch type
             when 'added', 'modified'
-              Set[set_key].add doc.data()
+              Mem.Set[set_key].add doc.data()
             when 'removed'
-              Set[set_key].remove doc.id
+              Mem.Set[set_key].remove doc.id
 
   firestore_model: (id, path)->
     snap_id = "#{id}_snap"
@@ -116,9 +115,9 @@ module.exports = m =
         @_firestore.doc path
       shot: (doc)->
         if o = doc.data()
-          Set[set_key].add o
+          Mem.Set[set_key].add o
         else
-          Set[set_key].remove doc.id
+          Mem.Set[set_key].remove doc.id
 
   firestore_collection: (id, path, chk, query)->
     snap_id = "#{id}_snap"
