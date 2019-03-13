@@ -9,6 +9,15 @@ localVue.use VueRouter
 component = require './index-spec.vue'
 router = new VueRouter
   mode: 'history'
+  routes: [{
+    name: "test"
+    path: "/"
+    component
+  }]
+router.push
+  name: "test"
+  params: {}
+
 store = new Vuex.Store
   modules:
     index:
@@ -53,3 +62,4 @@ describe "", =>
     expect( document.cookie ).toEqual "i=h"
     expect( sessionStorage.getItem "g" ).toEqual "j"
     expect( localStorage.getItem "h" ).toEqual "i"
+  undefined
