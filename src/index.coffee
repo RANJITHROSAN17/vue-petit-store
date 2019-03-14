@@ -3,6 +3,7 @@ module.exports = {
   ...require "./browser"
   ...require "./firebase"
   ...require "./vuex"
+  ...require "./device"
   ...require "./poll"
   ...require "./path"
 }

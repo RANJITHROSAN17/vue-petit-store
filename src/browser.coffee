@@ -107,9 +107,9 @@ module.exports = m =
       if newVal?
         @[id] = @[type_id].by_str newVal
 
-      @[handle_id] = ({ key, newVal })=>
+      @[handle_id] = ({ key, newValue })=>
         if key == id
-          @[id] = @[type_id].by_str newVal
+          @[id] = @[type_id].by_str newValue
       window.addEventListener "storage", @[handle_id]
     
     beforeDestroy: ->

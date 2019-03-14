@@ -16,6 +16,10 @@ div
 { replaceState, pushState, sessionStorage, localStorage, cookie,
   firestore_models, firestore_model, firestore_collection, firestore_doc,
   vuex_read, vuex,
+
+  poll,
+
+  geo, scroll, accel, rotate
 } = require "../lib/index.min"
 
 module.exports =
@@ -29,6 +33,11 @@ module.exports =
     sessionStorage "g"
     localStorage "h"
     cookie "i"
+    poll ->
+    geo()
+    scroll()
+    accel()
+    rotate()
   ]
 
   data: ->
