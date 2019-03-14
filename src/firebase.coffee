@@ -39,6 +39,20 @@ firestore_base = (id, path, chk, query, { del, add, snap, shot })->
       [ path_id, snap_id ]
   join = joinSnapshot join_target, shot
 
+  comp =
+    _firestore: firestore
+    [path_id]: path
+    [snap_id]: ->
+      if @[path_id]
+        snap.call @, @[path_id]
+
+  if chk && query
+    Object.assign comp,
+      [chk_id]: chk
+      [query_id]: ->
+        if @[chk_id] && @[snap_id]
+          query.call @, @[snap_id]
+
   data: ->
     step: Mem.State.step
 
@@ -54,26 +68,7 @@ firestore_base = (id, path, chk, query, { del, add, snap, shot })->
     [add_id]: add
     [del_id]: del
 
-  computed:
-    if chk && query
-      _firestore: firestore
-
-      [path_id]: path
-      [snap_id]: ->
-        if @[path_id]
-          snap.call @, @[path_id]
-
-      [chk_id]: chk
-      [query_id]: ->
-        if @[chk_id] && @[snap_id]
-          query.call @, @[snap_id]
-    else
-      _firestore: firestore
-
-      [path_id]: path
-      [snap_id]: ->
-        if @[path_id]
-          snap.call @, @[path_id]
+  computed: comp
 
   watch:
     [snapshot]: join
