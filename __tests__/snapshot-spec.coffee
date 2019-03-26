@@ -3,6 +3,8 @@ localVue = createLocalVue()
 Vuex = require 'vuex'
 VueRouter = require 'vue-router'
 
+{ poll } = require "../lib/index.min"
+
 localVue.use Vuex
 localVue.use VueRouter
 
@@ -30,6 +32,12 @@ store = new Vuex.Store
           Object.assign state, o
         swap: (state)->
           [state.b, state.a] = [state.a, state.b]
+        test: ->
+      actions: {
+        ...poll.caches "1s",
+          poll_test: -> "https://test.code"
+      }
+        
 
 describe "", =>
   test 'snapshot', =>

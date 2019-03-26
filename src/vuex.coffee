@@ -1,28 +1,26 @@
 _ = require 'lodash'
 
 module.exports = m =
-  vuex_read: (path, keys)->
-    dir = path.split('.')
-    computed = {}
-    keys.map (key)->
-      getter = [...dir[0..-1], key].join('.')
-      computed[key] =
+  vuex_read: (key, opt)->
+    dir = (opt.on || "").split('.')
+    getter = [...dir[0..-1], key].join('.')
+
+    computed:
+      [key]:
         get: ->
           _.get @$store.state, getter
-    { computed }
 
-  vuex: (path, keys)->
-    dir = path.split('.')
-    computed = {}
-    keys.forEach (key)->
-      mutation = "#{dir[0]}/update"
-      getter = [...dir[0..-1], key].join('.')
-      setter = [...dir[1..-1], key].join('.')
-      computed[key] =
+  vuex: (key, opt)->
+    dir = (opt.on || "").split('.')
+    mutation = [dir[0], 'update'].join('/')
+    getter = [...dir[0..-1], key].join('.')
+    setter = [...dir[1..-1], key].join('.')
+  
+    computed:
+      [key]:
         get: ->
           _.get @$store.state, getter
         set: (val)->
           o = _.set {}, setter, val
           @$store.commit mutation, o
-    { computed }
 

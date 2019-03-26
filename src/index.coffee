@@ -1,6 +1,7 @@
 module.exports = {
   ...require "./struct"
-  ...require "./browser"
+  ...require "./uri"
+  ...require "./storage"
   ...require "./firebase"
   ...require "./vuex"
   ...require "./device"

@@ -20,58 +20,6 @@ catch e
 
 
 module.exports = m =
-  replaceState: (id)->
-    default_id = "#{id}_default"
-    type_id = "#{id}_type"
-
-    created: ->
-      @[default_id] = _.get @, id
-      @[type_id] = types[@[default_id].constructor]
-
-    mounted: ->
-      newVal = @$route.params[id] || @$route.query[id]
-      newVal = @[type_id].by_url newVal
-      newVal ?= @[default_id]
-      @[id] = newVal
-
-    beforeRouteUpdate: (newRoute, oldRoute, next)->
-      next()
-      newVal = newRoute.params[id] || newRoute.query[id]
-      newVal = @[type_id].by_url newVal
-      newVal ?= @[default_id]
-      @[id] = newVal
-
-    watch:
-      [id]: ( newVal )->
-        { location, href } = @$router.resolve relative_to @$route, { [id]: newVal }, true
-        history.replaceState null, null, href
-
-  pushState: (id)->
-    default_id = "#{id}_default"
-    type_id = "#{id}_type"
-
-    created: ->
-      @[default_id] = _.get @, id
-      @[type_id] = types[@[default_id].constructor]
-
-    mounted: ->
-      newVal = @$route.params[id] || @$route.query[id]
-      newVal = @[type_id].by_url newVal
-      newVal ?= @[default_id]
-      @[id] = newVal
-
-    beforeRouteUpdate: (newRoute, oldRoute, next)->
-      next()
-      newVal = newRoute.params[id] || newRoute.query[id]
-      newVal = @[type_id].by_url newVal
-      newVal ?= @[default_id]
-      @[id] = newVal
-
-    watch:
-      [id]: ( newVal )->
-        { location, href } = @$router.resolve relative_to @$route, { [id]: newVal }, true
-        history.pushState null, null, href
-
   sessionStorage: (id)->
     default_id = "#{id}_default"
     type_id = "#{id}_type"

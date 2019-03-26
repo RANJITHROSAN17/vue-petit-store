@@ -24,8 +24,8 @@ div
 
 module.exports =
   mixins: [
-    vuex      "index", ["a"]
-    vuex_read "index", ["b"]
+    vuex      "a", on: "index"
+    vuex_read "b", on: "index"
     pushState "c"
     pushState "d"
     replaceState "e"
@@ -33,7 +33,7 @@ module.exports =
     sessionStorage "g"
     localStorage "h"
     cookie "i"
-    poll ->
+    poll -> []
     geo()
     scroll()
     accel()
