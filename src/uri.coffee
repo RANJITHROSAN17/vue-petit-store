@@ -35,8 +35,11 @@ baseState = (change_url)-> (id)->
   beforeRouteUpdate: (newRoute, oldRoute, next)->
     next()
     newVal = newRoute.params[id] || newRoute.query[id]
-    if newVal?
-      @[id] = @[type_id].by_url newVal
+    @[id] =
+      if newVal?
+        @[type_id].by_url newVal
+      else
+        @[default_id]
 
   watch:
     [id]: ( newVal )->
