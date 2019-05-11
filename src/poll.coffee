@@ -1,17 +1,21 @@
 Mem = require 'memory-orm'
-Dexie = require("dexie").default
+
+dexie = null
+poll_request = ->
+  return unless document?
+  Dexie = require("dexie").default
+  dexie = new Dexie 'giji'
+  dexie
+  .version(1).stores
+    meta: '&idx'
+    data: '&idx'
+  poll_request = ->
 
 { to_tempo } = require "./struct"
 
 is_cache = {}
 is_online = is_visible = false
 
-if document?
-  dexie = new Dexie 'giji'
-  dexie
-  .version(1).stores
-    meta: '&idx'
-    data: '&idx'
 
 
 poll = (opt)->
@@ -19,6 +23,7 @@ poll = (opt)->
     step: Mem.State.step
 
   mounted: ->
+    poll_request()
     @timers = {}
     window.addEventListener 'offline', @_waitwake
     window.addEventListener 'online', @_waitwake
@@ -83,27 +88,29 @@ poll.cache = (timestr, vuex_id, opt)->
         wait = new Date - write_at
         console.log { timestr, idx, wait, url }
 
+      try
+        if write_at < is_cache[idx]
+          get_pass()
+        else
+          # IndexedDB metadata not use if memory has past data, 
+          unless 0 < is_cache[idx]
+            meta = await dexie.meta.get idx
 
-      if write_at < is_cache[idx]
-        get_pass()
-      else
-        # IndexedDB metadata not use if memory has past data, 
-        unless 0 < is_cache[idx]
-          meta = await dexie.meta.get idx
+          switch
+            when write_at < meta?.next_at
+              await get_by_lf()
 
-        switch
-          when write_at < meta?.next_at
-            await get_by_lf()
+            when 0 < meta?.next_at
+              await get_by_lf()
+              await get_by_network()
 
-          when 0 < meta?.next_at
-            await get_by_lf()
-            await get_by_network()
+            else
+              await get_by_network()
+              dexie.meta.put { idx, next_at }
+        is_cache[idx] = next_at
+      catch e
+        console.error e
 
-          else
-            await get_by_network()
-            dexie.meta.put { idx, next_at }
-
-      is_cache[idx] = next_at
       if timeout < 0x7fffffff  #  ほぼ25日
         timers[url] = setTimeout roop, timeout
     roop()

@@ -3,6 +3,11 @@ localVue = createLocalVue()
 Vuex = require 'vuex'
 VueRouter = require 'vue-router'
 
+live = require "~/../giji-fire-new/config/live.yml"
+firebase = require "firebase"
+require 'firebase/firestore'
+firebase.initializeApp live.firebase
+
 { poll } = require "../lib/index.min"
 
 localVue.use Vuex

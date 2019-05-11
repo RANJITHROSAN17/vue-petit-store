@@ -1,15 +1,15 @@
 <template lang="pug">
 div
-  span {{ a }}
-  span {{ b }}
-  span {{ c }}
-  span {{ d }}
-  span {{ e }}
-  span {{ f }}
-  span {{ g }}
-  span {{ h }}
-  span {{ i }}
-  span {{ j }}
+  span(v-col) {{ a }}
+  span(v-col) {{ b }}
+  span(v-col) {{ c }}
+  span(v-col) {{ d }}
+  span(v-col) {{ e }}
+  span(v-col) {{ f }}
+  span(v-col) {{ g }}
+  span(v-col) {{ h }}
+  span(v-col) {{ i }}
+  span(v-col) {{ j }}
 </template>
 
 <script lang="coffee">
@@ -17,9 +17,14 @@ div
   firestore_models, firestore_model, firestore_collection, firestore_doc,
   vuex_read, vuex,
 
+  curtain,
+  resize,
+
+  on_horizon, on_peek, on_appear,
+
   poll,
 
-  geo, scroll, accel, rotate
+  geo, gyro, scroll, accel, rotate
 } = require "../lib/index.min"
 
 module.exports =
@@ -33,14 +38,32 @@ module.exports =
     sessionStorage "g"
     localStorage "h"
     cookie "i"
+    firestore_collection "items",
+      -> "/test/book-1/items"
+      (o)-> @name && o.where("name1", "==", @name)
+      (o)-> @name && o.where("name2", "==", @name)
     poll -> []
     geo()
-    scroll()
+    gyro()
     accel()
     rotate()
+    scroll()
+    curtain "col"
   ]
 
+  directives: 
+    peek:    on_peek    'peek'
+    appear:  on_appear  'appear'
+    resize:  resize     'resize'
+    horizon: on_horizon 'horizon'
+
   data: ->
+    peek:    "test"
+    appear:  "test"
+    resize:  "test"
+    horizon: "test"
+    name: "test"
+    items: {}
     c: "c"
     d: "d"
     e: "e"

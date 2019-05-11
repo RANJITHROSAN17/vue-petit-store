@@ -1,81 +1,86 @@
-motion_request = ->
-  return unless window?
-  window.addEventListener "deviceorientation", ({ alpha, beta, gamma, absolute })->
-    gyro.alpha = round alpha
-    gyro.beta = round beta
-    gyro.gamma = round gamma
+geo_to_s = (n, mark, minus)->
+  n1 = parseInt n 
+  n2 = parseInt n *       60 % 60
+  n3 = parseInt n *     3600 % 60
+  n4 = parseInt n *   216000 % 60
+  n5 = parseInt n * 12960000 % 60
+  mark = minus if n < 0
+  """#{n1}°#{n2}′#{n3}″#{n4}‴#{n5}⁗#{mark}"""
 
-  window.addEventListener "devicemotion", ({ interval, acceleration, accelerationIncludingGravity, rotationRate })->
-    interval
-    { x, y, z } = acceleration
-    accel.x = round x
-    accel.y = round y
-    accel.z = round z
+mks_to_s = (n, mark)->
+  n1 = parseInt n
+  n2 = parseInt n * 100 % 100
+  """#{n1}#{mark}#{n2}c#{mark}"""
 
-    { x, y, z } = accelerationIncludingGravity
-    accel_with_gravity.x = round x
-    accel_with_gravity.y = round y
-    accel_with_gravity.z = round z
+threshold_to_s = (newVal, margin, keep, lo, l1, l2, l3)->
+  switch
+    when newVal < -margin
+      l1
+    when margin < newVal
+      l3
+    when lo == l1 && newVal < -keep
+      l1
+    when lo == l3 && keep < newVal
+      l3
+    else
+      l2
 
-    gravity.x = round x - acceleration.x
-    gravity.y = round y - acceleration.y
-    gravity.z = round z - acceleration.z
+xyz = (newVal, oldVal)->
+  { x, y, z } = newVal
+  { margin, keep } = m
+  margin *= 10
+  keep   *= 10
+  oldVal.label_x = lx = threshold_to_s x, margin, keep, oldVal.label_x, "右", "", "左"
+  oldVal.label_y = ly = threshold_to_s y, margin, keep, oldVal.label_y, "上", "", "下"
+  oldVal.label_z = lz = threshold_to_s z, margin, keep, oldVal.label_z, "表", "", "裏"
+  oldVal.label = """#{lx}#{ly}#{lz}"""
 
-    { alpha, beta, gamma } = rotationRate
-    rotate.alpha = round alpha
-    rotate.beta  = round beta
-    rotate.gamma = round gamma
+  oldVal.x = x
+  oldVal.y = y
+  oldVal.z = z
 
-  motion_request = ->
+abg = (newVal, oldVal)->
+  { alpha, beta, gamma } = newVal
+  { margin, keep } = m
+  margin *= 360
+  keep   *= 360
+  oldVal.label_alpha = la = threshold_to_s alpha, margin, keep, oldVal.label_alpha, "押下", "", "引上"
+  oldVal.label_beta  = lb = threshold_to_s beta,  margin, keep, oldVal.label_beta,  "左巻", "", "右巻"
+  oldVal.label_gamma = lg = threshold_to_s gamma, margin, keep, oldVal.label_gamma, "右折", "", "左折"
+  oldVal.label = """#{la}#{lb}#{lg}"""
 
-geo_request = ->
-  return unless navigator?.geolocation?
-  navigator.geolocation.watchPosition ({ coords, timestamp })->
-    { accuracy, altitudeAccuracy, latitude, longitude, altitude, heading, speed } = coords
-    geo.latitude = latitude
-    geo.longitude = longitude
-    geo.altitude = altitude
-    geo.heading = heading
-    geo.speed = speed
+  oldVal.alpha = alpha
+  oldVal.beta  = beta
+  oldVal.gamma = gamma
 
-  , ({ code })->
-    console.log "watchPosition error = #{code}"
-  ,
-    enableHighAccuracy: true
-    timeout:    10 * 1000
-    maximumAge: 60 * 1000
-
-  geo_request = ->
-
-round = (val)->
-  m.pow * Math.round val
-
-gyro =
-  alpha: 0 # z-axis
-  beta:  0 # x-axis
-  gamma: 0 # y-axis
-
-accel =
+xyz_new = ->
   x: 0
   y: 0
   z: 0
+  label: ""
+  label_x: ""
+  label_y: ""
+  label_z: ""
 
-gravity =
-  x: 0
-  y: 0
-  z: 0
-
-accel_with_gravity =
-  x: 0
-  y: 0
-  z: 0
-
-rotate =
+abg_new = ->
   alpha: 0
   beta:  0
   gamma: 0
+  absolute: 0
+  label: ""
+  label_alpha: ""
+  label_beta:  ""
+  label_gamma: ""
+
+accel = xyz_new()
+gravity = xyz_new()
+accel_with_gravity = xyz_new()
+
+gyro = abg_new()
+rotate = abg_new()
 
 geo =
+  label: ""
   latitude:  0
   longitude: 0
   altitude:  0
@@ -95,51 +100,145 @@ scroll =
   width:   0
 
 
+deviceorientation =
+  count: 0
+  call: ({ alpha, beta, gamma, absolute })->
+    gyro.alpha = alpha
+    gyro.beta  = beta
+    gyro.gamma = gamma
+    gyro.absolute = absolute
+
+  with: (o)->
+    Object.assign o,
+      mounted: =>
+        return unless window?
+        return if @count++
+        window.addEventListener "deviceorientation", @call
+
+      beforeDestroy: =>
+        return if --@count
+        window.removeEventListener "deviceorientation", @call
+
+devicemotion =
+  count: 0
+  call: ({ interval, acceleration, accelerationIncludingGravity, rotationRate })->
+    calc_gravity =
+      x: accelerationIncludingGravity.x - acceleration.x
+      y: accelerationIncludingGravity.y - acceleration.y
+      z: accelerationIncludingGravity.z - acceleration.z
+    xyz acceleration,                 accel
+    xyz accelerationIncludingGravity, accel_with_gravity
+    xyz calc_gravity,                 gravity
+
+    abg rotationRate, rotate
+
+  with: (o)->
+    Object.assign o,
+      mounted: =>
+        return unless window?
+        return if @count++
+        window.addEventListener "devicemotion", @call
+
+      beforeDestroy: =>
+        return if --@count
+        window.removeEventListener "devicemotion", @call
+
+geolocation =
+  watch_id: null
+  count: 0
+  call: ({ coords, timestamp })->
+    { accuracy, altitudeAccuracy, latitude, longitude, altitude, heading, speed } = coords
+    altitude ?= 0
+
+    geo.label = """#{geo_to_s(longitude,'N','S')} #{geo_to_s(latitude,'E','W')} #{mks_to_s(altitude,'m')}"""
+    geo.longitude = longitude
+    geo.latitude = latitude
+    geo.altitude = altitude
+    geo.heading = heading
+    geo.speed = speed
+
+  with: (o)->
+    Object.assign o,
+      mounted: =>
+        return unless navigator?.geolocation?
+        return if @count++
+        @watch_id = navigator.geolocation.watchPosition @call, ({ code })->
+          console.log "watchPosition error = #{code}"
+        ,
+          enableHighAccuracy: true
+          maximumAge: 60 * 1000
+          timeout:    10 * 1000
+      beforeDestroy: =>
+        return if --@count
+        navigator.geolocation.clearWatch @watch_id
+
+scroll_poll =
+  count: 0
+  call: ->
+    scroll.top = parseInt scrollY
+    scroll.left = parseInt scrollX
+    scroll.width = parseInt innerWidth
+    scroll.height = parseInt innerHeight
+    { height, top, left, width } = scroll
+
+    scroll.horizon = height >> 1
+    scroll.center = top + (height >> 1)
+    scroll.bottom = top + height
+    scroll.right = left + width
+
+    requestAnimationFrame scroll_poll.call
+
+  with: (o)->
+    Object.assign o,
+      mounted: =>
+        return unless window?
+        return if @count++
+        @call()
+
+      beforeDestroy: =>
+
 
 module.exports = m =
-  device: ({ pow })->
-    m.pow = pow
+  margin: 0.4
+  keep:   0.1
+  device: ({ margin, keep })->
+    m.margin = margin
+    m.keep   = keep
 
   geo: ->
-    data: ->
-      { geo }
-    mounted: ->
-      geo_request()
+    geolocation.with
+      data: ->
+        { geo }
+
+  gyro: ->
+    deviceorientation.with
+      data: ->
+        { gyro }
 
   accel: ->
-    data: ->
-      { accel, gravity, accel_with_gravity }
-
-    created: ->
-      motion_request()
+    devicemotion.with
+      data: ->
+        { accel, gravity, accel_with_gravity }
 
   rotate: ->
-    data: ->
-      { gyro, rotate }
-
-    created: ->
-      motion_request()
+    devicemotion.with
+      data: ->
+        { rotate }
 
   scroll: ->
-    data: ->
-      { scroll }
+    scroll_poll.with
+      data: ->
+        { scroll }
 
-    created: ->
-      return unless window?
-      @scroll_poll()
+      methods:
+        scroll_to: ({ query, mode })->
+          return unless el = document?.querySelector query
+          return unless { height, top } = el.getBoundingClientRect()
+          switch mode
+            when 'center'
+              top += (height >> 1) - scroll.horizon
+            when 'bottom'
+              top +=  height
 
-    methods:
-      scroll_poll: ->
-        @scroll.top = scrollY
-        @scroll.left = scrollX
-        @scroll.width = innerWidth
-        @scroll.height = innerHeight
-        { height, top, left, width } = @scroll
-
-        @scroll.horizon = parseInt height / 2
-        @scroll.center = parseInt top + height / 2
-        @scroll.bottom = parseInt top + height
-        @scroll.right = parseInt left + width
-
-        requestAnimationFrame @scroll_poll
-
+          console.log " go to #{query}(#{mode}) as #{top}px"
+          window.scrollBy 0, top

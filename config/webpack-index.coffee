@@ -23,7 +23,7 @@ coffee =
       ]
 
 module.exports =
-  mode: 'production'
+  mode: 'development'
   target: 'node' # Important
   devtool: 'source-map'
   entry:

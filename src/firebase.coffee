@@ -8,6 +8,20 @@ firestore = ->
   store.settings {}
   store
 
+copy_to_str = (key)->(...args)->
+  @str += " #{key}:"
+  for arg in args
+    @str += arg
+    @str += ":"
+  @ref = @ref[key] ...args
+  @
+
+class FirestoreQueryProxy
+  constructor: (@str, @ref)->
+  orderBy: copy_to_str "orderBy"
+  limit:   copy_to_str "limit"
+  where:   copy_to_str "where"
+
 joinSnapshot = (target, shot)->
   eject = ->
   (gate)->
@@ -15,70 +29,81 @@ joinSnapshot = (target, shot)->
     eject =
       if gate && @[target]
         console.log "join", gate
-        @[target].onSnapshot shot.bind @
+        @[target].onSnapshot shot.bind(@), (err)->
+          console.error err
       else
         ->
 
-firestore_base = (id, path, chk, query, { del, add, snap, shot })->
+firestore_base = (id, path, querys, { del, add, snap, shot })->
   default_id = "#{id}_default"
 
-  query_id = "#{id}_query"
-  snap_id  = "#{id}_snap"
-
-  chk_id  = "#{id}_chk"
+  join_id = "#{id}_join"
+  snap_id = "#{id}_snap"
   path_id = "#{id}_path"
 
-  join_id = "#{id}_join"
   add_id  = "#{id}_add"
   del_id  = "#{id}_del"
 
-  [ snapshot, join_target ] =
-    if chk && query
-      [ chk_id, query_id ]
-    else
-      [ path_id, snap_id ]
-  join = joinSnapshot join_target, shot
-
-  comp =
+  joins = []
+  watch = {}
+  computed =
     _firestore: firestore
     [path_id]: path
     [snap_id]: ->
       if @[path_id]
         snap.call @, @[path_id]
 
-  if chk && query
-    Object.assign comp,
-      [chk_id]: chk
-      [query_id]: ->
-        if @[chk_id] && @[snap_id]
-          query.call @, @[snap_id]
+  if querys?.length
+    querys.forEach (query, idx)->
+      query_id = "#{id}_query_#{idx}_query"
+      ref_id   = "#{id}_query_#{idx}_ref"
+      str_id   = "#{id}_query_#{idx}_str"
+
+      computed[ref_id] = ->
+        return unless @[path_id]
+        query.call @, new FirestoreQueryProxy @[path_id], @[snap_id]
+
+      computed[str_id] = ->
+        @[ref_id]?.str
+
+      computed[query_id] = ->
+        if @[str_id]
+          @[ref_id].ref
+
+      join = joinSnapshot query_id, shot
+      joins.push [join, str_id]
+      watch[str_id] = join
+
+  else
+    join = joinSnapshot snap_id, shot
+    joins.push [join, path_id]
+    watch[path_id] = join
 
   data: ->
     step: Mem.State.step
 
+  beforeDestroy: ->
+    for [join, join_id] in joins
+      join.call @, undefined
+
   mounted: ->
     @[default_id] = @[id]
-    @[join_id] @[snapshot]
-
-  beforeDestroy: ->
-    @[join_id] undefined
+    for [join, join_id] in joins
+      join.call @, @[join_id]
 
   methods:
-    [join_id]: join
     [add_id]: add
     [del_id]: del
 
-  computed: comp
-
-  watch:
-    [snapshot]: join
+  computed: computed
+  watch:    watch
 
 
 module.exports = m =
-  firestore_models: (id, path, chk, query)->
+  firestore_models: (id, path, ...querys)->
     snap_id = "#{id}_snap"
     set_key = id[..-2]
-    firestore_base id, path, chk, query,
+    firestore_base id, path, querys,
       del: (_id)->
         return unless _id
         @[snap_id]?.doc(_id).delete()
@@ -100,7 +125,7 @@ module.exports = m =
   firestore_model: (id, path)->
     snap_id = "#{id}_snap"
     set_key = id
-    firestore_base id, path, null, null,
+    firestore_base id, path, null,
       del: ->
         @[snap_id]?.delete()
       add: (doc)->
@@ -114,9 +139,9 @@ module.exports = m =
         else
           Mem.Set[set_key].remove doc.id
 
-  firestore_collection: (id, path, chk, query)->
+  firestore_collection: (id, path, ...querys)->
     snap_id = "#{id}_snap"
-    firestore_base id, path, chk, query,
+    firestore_base id, path, querys,
       del: (_id)->
         return unless _id
         @[snap_id]?.doc(_id).delete()
@@ -138,7 +163,7 @@ module.exports = m =
   firestore_doc: (id, path)->
     snap_id = "#{id}_snap"
     default_id = "#{id}_default"
-    firestore_base id, path, null, null,
+    firestore_base id, path, null,
       del: ->
         @[snap_id]?.delete()
       add: (doc)->

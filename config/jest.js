@@ -12,6 +12,7 @@ module.exports = {
   transform: {
     "^.+\\.coffee$": "<rootDir>/config/coffee-jest.js",
     "^.+\\.js$": "babel-jest",
+    "^.+\\.yml$": "yaml-jest",
     "^.+\\.pug$": "pug-jest",
     "^.+\\.vue$": "vue-jest"
   }
