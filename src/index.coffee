@@ -1,5 +1,7 @@
 module.exports = {
+  ...require "./time"
   ...require "./struct"
+  ...require "./timer"
   ...require "./uri"
   ...require "./curtain"
   ...require "./observer"

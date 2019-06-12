@@ -6,13 +6,20 @@ $session_storage = {}
 $local_storage = {}
 $cookie_storage = {}
 
+capture = (s, type, _default)->
+  if s?
+    type.by_str s
+  else
+    _default
+
 module.exports = m =
   sessionStorage: (id)->
     global_id = "$data.$session_storage.#{id}"
     default_id = "#{id}_default"
     type_id = "#{id}_type"
 
-    _.set $session_storage, id, null
+    unless _.has $session_storage, id
+      _.set $session_storage, id, null
 
     data: -> { $session_storage }
 
@@ -22,17 +29,16 @@ module.exports = m =
 
     mounted: ->
       s = window.sessionStorage.getItem id
-      if s?
-        val = @[type_id].by_str s
-        _.set @, id, val
-        @$set @$data.$session_storage, id, val
+      val = capture s, @[type_id], @[default_id]
+      _.set @, id, val
+      _.set $session_storage, id, val
 
     watch:
       [global_id]: ( val )->
         _.set @, id, val
 
       [id]: ( val )->
-        @$set @$data.$session_storage, id, val
+        _.set $session_storage, id, val
         if val?
           s = @[type_id].to_str val
           window.sessionStorage.setItem id, s
@@ -45,7 +51,8 @@ module.exports = m =
     handle_id = "#{id}_handle"
     type_id = "#{id}_type"
 
-    _.set $local_storage, id, null
+    unless _.has $local_storage, id
+      _.set $local_storage, id, null
 
     data: -> { $local_storage }
 
@@ -55,15 +62,14 @@ module.exports = m =
 
     mounted: ->
       s = window.localStorage.getItem id
-      if s?
-        val = @[type_id].by_str s
-        _.set @, id, val
-        @$set @$data.$local_storage, id, val
+      val = capture s, @[type_id], @[default_id]
+      _.set @, id, val
+      _.set $local_storage, id, val
       @[handle_id] = ({ key, newValue })=>
         if key == id
-          val = @[type_id].by_str newValue
+          val = capture newValue, @[type_id], @[default_id]
           _.set @, id, val
-          @$set @$data.$local_storage, id, val
+          _.set $local_storage, id, val
 
       window.addEventListener "storage", @[handle_id]
     
@@ -75,7 +81,7 @@ module.exports = m =
         _.set @, id, val
 
       [id]: ( val )->
-        @$set @$data.$local_storage, id, val
+        _.set $local_storage, id, val
         if val?
           s = @[type_id].to_str val
           window.localStorage.setItem id, s
@@ -87,7 +93,8 @@ module.exports = m =
     default_id = "#{id}_default"
     type_id = "#{id}_type"
 
-    _.set $cookie_storage, id, null
+    unless _.has $cookie_storage, id
+      _.set $cookie_storage, id, null
 
     data: -> { $cookie_storage }
 
@@ -97,17 +104,16 @@ module.exports = m =
 
     mounted: ->
       s = Cookie.get id
-      if s?
-        val = @[type_id].by_str s
-        _.set @, id, val
-        @$set @$data.$cookie_storage, id, val
+      val = capture s, @[type_id], @[default_id]
+      _.set @, id, val
+      _.set $cookie_storage, id, val
 
     watch:
       [global_id]: ( val )->
         _.set @, id, val
 
       [id]: ( val )->
-        @$set @$data.$cookie_storage, id, val
+        _.set $cookie_storage, id, val
         if val?
           s = @[type_id].to_str val
           Cookie.set id, s, options

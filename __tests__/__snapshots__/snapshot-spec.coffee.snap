@@ -15,7 +15,7 @@ Array [
 ]
 `;
 
-exports[`snapshot 2`] = `"<div><span>a</span><span>b</span><span>c</span><span>d</span><span>e</span><span>f</span><span>g</span><span>h</span><span>i</span><span>j</span></div>"`;
+exports[`snapshot 2`] = `"<div><span>a</span><span>b</span><span>c</span><span>d</span><span>e</span><span>f</span><span>g</span><span>h</span><span>i</span><span>j</span><span>[]</span></div>"`;
 
 exports[`snapshot 3`] = `
 Array [
@@ -32,4 +32,4 @@ Array [
 ]
 `;
 
-exports[`snapshot 4`] = `"<div><span>A</span><span>a</span><span>f</span><span>e</span><span>d</span><span>c</span><span>j</span><span>i</span><span>h</span><span>g</span></div>"`;
+exports[`snapshot 4`] = `"<div><span>A</span><span>a</span><span>f</span><span>e</span><span>d</span><span>c</span><span>j</span><span>i</span><span>h</span><span>g</span><span>[]</span></div>"`;

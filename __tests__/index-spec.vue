@@ -10,6 +10,7 @@ div
   span(v-col) {{ h }}
   span(v-col) {{ i }}
   span(v-col) {{ j }}
+  span(v-col) {{ ary }}
 </template>
 
 <script lang="coffee">
@@ -38,6 +39,7 @@ module.exports =
     sessionStorage "g"
     localStorage "h"
     cookie "i"
+    pushState "ary"
     firestore_collection "items",
       -> "/test/book-1/items"
       (o)-> @name && o.where("name1", "==", @name)
@@ -72,6 +74,7 @@ module.exports =
     h: "h"
     i: "i"
     j: "j"
+    ary: []
 
   methods:
     swap: ->

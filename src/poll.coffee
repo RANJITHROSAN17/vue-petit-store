@@ -6,12 +6,23 @@ poll_request = ->
   Dexie = require("dexie").default
   dexie = new Dexie 'giji'
   dexie
-  .version(1).stores
+  .version(2).stores
     meta: '&idx'
     data: '&idx'
+  .upgrade (tx)->
+    tx.data.toCollection().modify ( o )->
+      o.data = o.pack
+      delete o.data
+
+  dexie.version(1).stores
+    meta: '&idx'
+    data: '&idx'
+
   poll_request = ->
 
-{ to_tempo } = require "./struct"
+{ to_tempo } = require "./time"
+
+# has_last = {}
 
 is_cache = {}
 is_online = is_visible = false
@@ -77,14 +88,21 @@ poll.cache = (timestr, vuex_id, opt)->
         console.log { timestr, idx, wait, url: null }
 
       get_by_lf = ->
-        { pack } = await dexie.data.get idx
-        Mem.State.store pack
+        meta = await dexie.data.get idx
+        Mem.State.store meta
+        # Mem.State.cleanup has_last[idx], meta
+        # has_last[idx] = meta
+
         wait = new Date - write_at 
         console.log { timestr, idx, wait, url: '(LF)' }
 
       get_by_network = ->
-        pack = await poll._api[name] url, id
-        await dexie.data.put { idx, pack }
+        meta = await poll._api[name] url, id
+        meta.idx = idx
+        # Mem.State.cleanup has_last[idx], meta
+        # has_last[idx] = meta
+
+        await dexie.data.put meta
         wait = new Date - write_at
         console.log { timestr, idx, wait, url }
 

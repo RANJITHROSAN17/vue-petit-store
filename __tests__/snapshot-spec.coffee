@@ -49,30 +49,46 @@ describe "", =>
     wrapper = mount component, { localVue, router, store }
     { vm } = wrapper
 
-    # base state
-    map = ( vm[c] for c in "abcdefghij" )
-    expect( map ).toMatchSnapshot()
-    expect( wrapper.html() ).toMatchSnapshot()
+    vm.$nextTick ->
+      # base state
+      map = ( vm[c] for c in "abcdefghij" )
+      expect( map ).toMatchSnapshot()
+      expect( wrapper.html() ).toMatchSnapshot()
 
-    # vuex swap
-    store.commit 'index/swap'
-    expect([vm.a, vm.b]).toEqual ["b","a"]
+      # vuex swap
+      store.commit 'index/swap'
+      vm.$nextTick ->
+        expect([vm.a, vm.b]).toEqual ["b","a"]
 
-    # vuex update
-    wrapper2 = mount component, { localVue, router, store }
-    wrapper2.vm.a = "A"
-    expect(vm.a).toEqual "A"
+        # vuex update
+        wrapper2 = mount component, { localVue, router, store }
+        vm.$nextTick ->
+          wrapper2.vm.a = "A"
 
-    # state swap
-    vm.swap()
+          vm.$nextTick ->
+            expect(vm.a).toEqual "A"
 
-    map = ( vm[c] for c in "abcdefghij" )
-    expect( map ).toMatchSnapshot()
-    expect( wrapper.html() ).toMatchSnapshot()
-    expect( location.pathname ).toEqual "/"
-    expect( location.search ).toEqual "?c=f&d=e&e=d&f=c"
-    expect( location.hash ).toEqual ""
-    expect( document.cookie ).toEqual "i=h"
-    expect( sessionStorage.getItem "g" ).toEqual "j"
-    expect( localStorage.getItem "h" ).toEqual "i"
+            # state swap
+            vm.swap()
+
+            vm.$nextTick ->
+              map = ( vm[c] for c in "abcdefghij" )
+              expect( map ).toMatchSnapshot()
+              expect( wrapper.html() ).toMatchSnapshot()
+              expect( location.pathname ).toEqual "/"
+              expect( location.search ).toEqual "?c=f&d=e&e=d&f=c"
+              expect( location.hash ).toEqual ""
+              expect( document.cookie ).toEqual "i=h"
+              expect( sessionStorage.getItem "g" ).toEqual "j"
+              expect( localStorage.getItem "h" ).toEqual "i"
+
+              vm.$router.push
+                name: "test"
+                params: {}
+                query:
+                  ary: [1,2,3]
+
+              vm.$nextTick ->
+                expect( location.search ).toEqual "?ary=1&ary=2&ary=3"
+
   undefined
