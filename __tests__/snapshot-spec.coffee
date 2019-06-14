@@ -4,8 +4,9 @@ Vuex = require 'vuex'
 VueRouter = require 'vue-router'
 
 live = require "~/../giji-fire-new/config/live.yml"
-firebase = require "firebase"
+firebase = require "firebase/app"
 require 'firebase/firestore'
+
 firebase.initializeApp live.firebase
 
 { poll } = require "../lib/index.min"
@@ -51,12 +52,14 @@ describe "", =>
 
     vm.$nextTick ->
       # base state
+      vm.a = "a"
       map = ( vm[c] for c in "abcdefghij" )
       expect( map ).toMatchSnapshot()
       expect( wrapper.html() ).toMatchSnapshot()
 
       # vuex swap
       store.commit 'index/swap'
+      vm.a = "b"
       vm.$nextTick ->
         expect([vm.a, vm.b]).toEqual ["b","a"]
 

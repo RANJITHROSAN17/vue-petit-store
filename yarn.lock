@@ -3359,7 +3359,7 @@ findup-sync@^2.0.0:
     micromatch "^3.0.4"
     resolve-dir "^1.0.1"
 
-firebase@^5.10.1:
+firebase@^5.11.1:
   version "5.11.1"
   resolved "https://registry.yarnpkg.com/firebase/-/firebase-5.11.1.tgz#e7d376265545d7b0538b4679a96145c26a2b5c39"
   integrity sha512-cop2UHytKas8WJZTovZqhpZIgwRfsvegijyOjgmMJoaOHCnyH4eymPneglgXsK5ExOdxJSTC4QD5qETrdL3dMw==
@@ -4818,10 +4818,10 @@ memory-fs@^0.4.0, memory-fs@~0.4.1:
     errno "^0.1.3"
     readable-stream "^2.0.1"
 
-memory-orm@^0.3.16:
-  version "0.3.16"
-  resolved "https://registry.yarnpkg.com/memory-orm/-/memory-orm-0.3.16.tgz#495dd29cb13e3ed673454545643460af819f2076"
-  integrity sha512-+0vLGCqz4iPmsTW8JEqBZccLfNbIzdXI++PUz62lw/mHSAiaHLLFn6F899HDGmmO6B2BI5VR7W/NokCy8V6SlA==
+memory-orm@^0.4.1:
+  version "0.4.1"
+  resolved "https://registry.yarnpkg.com/memory-orm/-/memory-orm-0.4.1.tgz#1e8f31d66402af74b58863f868111dfad56f5182"
+  integrity sha512-IE7HTx0XB50C+iYZBQR+wF8KL4EcrF8DsvVdRxag0QtErhtAj6da8/ZUDSih1PPN/E4fgWc2O5Y9Og/eM20mEQ==
   dependencies:
     lodash "^4.17.11"
 

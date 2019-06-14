@@ -1,6 +1,19 @@
 _ = require 'lodash'
 
+$shared_memory = {}
+
 module.exports = m =
+  share: (id)->
+    $shared_memory[id] = null
+    data: ->
+      { $shared_memory }
+    computed:
+      [id]:
+        get: ->
+          $shared_memory[id]
+        set: (o)->
+          $shared_memory[id] = o
+
   vuex_read: (id, opt)->
     dir = (opt.on || "").split('.')
     getter = [...dir[0..-1], id].join('.')

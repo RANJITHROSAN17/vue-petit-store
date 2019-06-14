@@ -16,7 +16,7 @@ div
 <script lang="coffee">
 { replaceState, pushState, sessionStorage, localStorage, cookie,
   firestore_models, firestore_model, firestore_collection, firestore_doc,
-  vuex_read, vuex,
+  vuex_read, vuex, share
 
   curtain,
   resize,
@@ -30,7 +30,7 @@ div
 
 module.exports =
   mixins: [
-    vuex      "a", on: "index"
+    share "a"
     vuex_read "b", on: "index"
     pushState "c"
     pushState "d"

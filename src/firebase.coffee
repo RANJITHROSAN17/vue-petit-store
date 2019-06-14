@@ -1,7 +1,8 @@
 Mem = require "memory-orm"
 
 if window?
-  firebase = require "firebase"
+  firebase = require "firebase/app"
+  require "firebase/firestore"
 
 firestore = ->
   store = firebase.firestore()
