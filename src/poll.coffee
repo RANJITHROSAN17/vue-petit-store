@@ -30,9 +30,6 @@ is_online = is_visible = false
 
 
 poll = (opt)->
-  data: ->
-    step: Mem.State.step
-
   mounted: ->
     poll_request()
     @timers = {}

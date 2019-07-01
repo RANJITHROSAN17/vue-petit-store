@@ -4,7 +4,8 @@ $shared_memory = {}
 
 module.exports = m =
   share: (id)->
-    $shared_memory[id] = null
+    $shared_memory[id] ?= null
+
     data: ->
       { $shared_memory }
     computed:

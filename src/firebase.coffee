@@ -80,9 +80,6 @@ firestore_base = (id, path, querys, { del, add, snap, shot })->
     joins.push [join, path_id]
     watch[path_id] = join
 
-  data: ->
-    step: Mem.State.step
-
   beforeDestroy: ->
     for [join, join_id] in joins
       join.call @, undefined
