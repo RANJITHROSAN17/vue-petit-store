@@ -7,17 +7,17 @@ to_sec = (str)->
     return null unless num = Number num
     timeout +=
       switch unit
-        when "s"
+        when "s", "秒"
           num
-        when "m"
+        when "m", "分"
           60 * num
-        when "h"
+        when "h", "時"
           3600 * num
-        when "d"
+        when "d", "日"
           3600 * 24 * num
-        when "w"
+        when "w", "週"
           3600 * 24 * 7 * num
-        when "y"
+        when "y", "年"
           3600 * 24 * 365 * num
         else
           throw new Error "#{timestr} at #{num}#{unit}"
@@ -29,20 +29,20 @@ to_relative_time_distance = (msec)->
     return DISTANCES[idx]
   return DISTANCE_LONG_AGO
 
-to_tempo = (since, gap = "0s", write_at = new Date)->
-  since = to_msec since
-  gap   = to_msec gap
-  gap  -= timezone
-  write_at -= 0
-  to_tempo_bare since, gap, write_at
+to_tempo = (size, gap_str = "0s", write_at = new Date)->
+  size = to_msec size
+  gap   = to_msec(gap_str) + timezone
+  to_tempo_bare size, gap, write_at - 0
 
-to_tempo_bare = (since, gap, write_at)->
-  now_idx = Math.floor(( write_at - gap) / since)
-  last_at = (now_idx + 0) * since + gap
-  next_at = (now_idx + 1) * since + gap
-  timeout = next_at - write_at
+to_tempo_bare = (size, gap, write_at)->
+  now_idx = Math.floor(( write_at - gap) / size)
+  last_at = (now_idx + 0) * size + gap
+  next_at = (now_idx + 1) * size + gap
+  remain = next_at - write_at
+  since  = write_at - last_at
+  timeout = remain
 
-  { last_at, write_at, next_at, timeout, now_idx, timezone, since, gap }
+  { last_at, write_at, next_at, timeout, now_idx, timezone, remain, since, gap }
 
 
 SECOND = to_msec  "1s"
@@ -92,8 +92,4 @@ module.exports = m = {
   to_tempo_bare
   to_relative_time_distance
   timezone
-
-  msec_in_day: ( at )->
-    return null unless at?
-    return (at - timezone) % DAY
 }

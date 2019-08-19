@@ -99,6 +99,12 @@ scroll =
   height:  0
   width:   0
 
+  size:         0
+  aspect_ratio: 1
+  is_square:     true
+  is_oblong:    false
+  is_horizontal: true
+  is_vertical:  false
 
 deviceorientation =
   count: 0
@@ -180,6 +186,18 @@ scroll_poll =
     scroll.width = parseInt innerWidth
     scroll.height = parseInt innerHeight
     { height, top, left, width } = scroll
+
+    if width < height
+      scroll.size = width
+      scroll.aspect_ratio = height / width
+      scroll.is_vertical = true
+      scroll.is_horizontal = false
+    else
+      scroll.size = height
+      scroll.aspect_ratio = width / height
+      scroll.is_vertical = false
+      scroll.is_horizontal = true
+    scroll.is_square = !( scroll.is_oblong = 1.35 < scroll.aspect_ratio )
 
     scroll.horizon = height >> 1
     scroll.center = top + (height >> 1)
