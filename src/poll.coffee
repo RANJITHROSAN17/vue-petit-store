@@ -3,17 +3,8 @@ Mem = require 'memory-orm'
 dexie = null
 poll_request = ->
   return unless document?
-  Dexie = require("dexie").default
-  dexie = new Dexie 'giji'
-  dexie
-  .version(2).stores
-    meta: '&idx'
-    data: '&idx'
-  .upgrade (tx)->
-    tx.data.toCollection().modify ( o )->
-      o.data = o.pack
-      delete o.data
-
+  Dexie = require("dexie/dist/dexie")
+  dexie = new Dexie 'poll-web'
   dexie.version(1).stores
     meta: '&idx'
     data: '&idx'
@@ -29,7 +20,7 @@ is_online = is_visible = false
 
 
 
-poll = (opt)->
+poll = (cb)->
   mounted: ->
     poll_request()
     @timers = {}
@@ -50,7 +41,7 @@ poll = (opt)->
       for key, val of @timers
         clearTimeout val
 
-      list = opt.call @
+      list = cb.call @
       list.map ([name, id])=>
         idx = [name, id].join("&")
         dexie.meta.delete idx
@@ -63,22 +54,21 @@ poll = (opt)->
       is_visible = 'hidden' != document.visibilityState
       is_ok = is_online && is_visible
       if is_ok
-        list = opt.call @
+        list = cb.call @
         await Promise.all list.map ([name, id])=>
           @$store.dispatch name, { id, name, @timers }
       else
         for key, val of @timers
           clearTimeout val
 
-poll.cache = (timestr, vuex_id, opt)->
-  # console.log { timestr, timeout, url: opt('*') }
+poll.cache = (timestr = "10s", version = "1.0.0", vuex_id, cb)->
+  # console.log { timestr, timeout, url: cb('*') }
   ({ dispatch, state, commit, rootState }, { id, name, timers })->
-    url = opt id
+    url = cb id
     idx = [name, id].join("&")
 
     roop = ->
       { last_at, write_at, next_at, timeout } = to_tempo timestr
-
 
       get_pass = ->
         wait = new Date - write_at
@@ -87,8 +77,6 @@ poll.cache = (timestr, vuex_id, opt)->
       get_by_lf = ->
         meta = await dexie.data.get idx
         Mem.State.store meta
-        # Mem.State.cleanup has_last[idx], meta
-        # has_last[idx] = meta
 
         wait = new Date - write_at 
         console.log { timestr, idx, wait, url: '(LF)' }
@@ -96,8 +84,6 @@ poll.cache = (timestr, vuex_id, opt)->
       get_by_network = ->
         meta = await poll._api[name] url, id
         meta.idx = idx
-        # Mem.State.cleanup has_last[idx], meta
-        # has_last[idx] = meta
 
         await dexie.data.put meta
         wait = new Date - write_at
@@ -110,6 +96,8 @@ poll.cache = (timestr, vuex_id, opt)->
           # IndexedDB metadata not use if memory has past data, 
           unless 0 < is_cache[idx]
             meta = await dexie.meta.get idx
+            unless meta?.version == version
+              meta = null
 
           switch
             when write_at < meta?.next_at
@@ -121,7 +109,7 @@ poll.cache = (timestr, vuex_id, opt)->
 
             else
               await get_by_network()
-              dexie.meta.put { idx, next_at }
+              dexie.meta.put { idx, version, next_at }
         is_cache[idx] = next_at
       catch e
         console.error e
@@ -130,10 +118,10 @@ poll.cache = (timestr, vuex_id, opt)->
         timers[url] = setTimeout roop, timeout
     roop()
 
-poll.caches = (timestr, opts)->
-  for key, cb of opts
-    opts[key] = poll.cache timestr, key, cb
-  opts
+poll.caches = (...[timestr, version], actions)->
+  for key, cb of actions
+    actions[key] = poll.cache timestr, version, key, cb
+  actions
 
 poll._api =
   fetch: (url, cb)->

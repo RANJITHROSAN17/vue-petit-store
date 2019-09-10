@@ -1,17 +1,20 @@
 _ = require 'lodash'
 { types, relative_to } = require "./struct"
 
+zero = [null, undefined, "", NaN]
+
 routeBase = (change_url)-> (id)->
   default_id = "#{id}_default"
   type_id = "#{id}_type"
 
   route_into = (newRoute, oldRoute)->
     s = newRoute.params[id] || newRoute.query[id]
-    _.set @, id,
-      if s?
-        @[type_id].by_url s
-      else
+    val =
+      if zero.includes s
         @[default_id]
+      else
+        @[type_id].by_url s
+    _.set @, id, val
 
 
   created: ->
@@ -21,7 +24,7 @@ routeBase = (change_url)-> (id)->
   # for changed component.
   mounted: ->
     s = @$route.params[id] || @$route.query[id]
-    if s?
+    unless zero.includes s
       val = @[type_id].by_url s
       _.set @, id, val
 

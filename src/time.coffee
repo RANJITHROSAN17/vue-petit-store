@@ -1,3 +1,13 @@
+class Tempo
+  constructor: (...@args, @callback)->
+    @tempo = to_tempo @args[0], "0s", new Date 0
+
+  tick: ->
+    tempo = to_tempo ...@args
+    return if @tempo.now_idx === tempo.now_idx
+    @callback(tempo)
+    @tempo = tempo
+
 to_msec = (str)->
   1000 * to_sec str
 
@@ -44,7 +54,6 @@ to_tempo_bare = (size, gap, write_at)->
 
   { last_at, write_at, next_at, timeout, now_idx, timezone, remain, since, gap }
 
-
 SECOND = to_msec  "1s"
 MINUTE = to_msec  "1m"
 HOUR =   to_msec  "1h"
@@ -86,6 +95,7 @@ DISTANCES = [
 ]
 
 module.exports = m = {
+  Tempo
   to_msec
   to_sec
   to_tempo

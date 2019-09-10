@@ -1,6 +1,6 @@
 {
   "name": "vue-petit-store",
-  "version": "0.8.17",
+  "version": "0.8.28",
   "description": "petit store for vue mixin",
   "main": "lib/index.min.js",
   "repository": "git@github.com:7korobi/vue-petit-store.git",
@@ -29,9 +29,9 @@
   "preferGlobal": true,
   "private": false,
   "devDependencies": {
-    "@babel/core": "^7.5.5",
-    "@babel/plugin-transform-modules-commonjs": "^7.5.0",
-    "@nuxt/babel-preset-app": "^2.8.1",
+    "@babel/core": "^7.6.0",
+    "@babel/plugin-transform-modules-commonjs": "^7.6.0",
+    "@nuxt/babel-preset-app": "^2.9.2",
     "@vue/test-utils": "^1.0.0-beta.29",
     "babel-core": "^6.26.3",
     "babel-jest": "^24.9.0",
@@ -44,13 +44,13 @@
     "npm-run-all": "^4.1.5",
     "pug-jest": "^1.0.1",
     "vue": "^2.6.10",
-    "vue-jest": "^3.0.4",
-    "vue-router": "^3.1.2",
+    "vue-jest": "^3.0.5",
+    "vue-router": "^3.1.3",
     "vue-template-compiler": "^2.6.10",
     "vuex": "^3.1.1",
-    "webpack": "^4.39.2",
-    "webpack-cli": "^3.3.7",
-    "webpack-merge": "^4.2.1",
+    "webpack": "^4.39.3",
+    "webpack-cli": "^3.3.8",
+    "webpack-merge": "^4.2.2",
     "webpack-node-externals": "^1.7.2"
   },
   "scripts": {
@@ -65,8 +65,8 @@
   },
   "dependencies": {
     "dexie": "^2.0.4",
-    "firebase": "^6.4.0",
-    "memory-orm": "^0.4.8",
+    "firebase": "^6.6.0",
+    "memory-orm": "^0.4.14",
     "tiny-cookie": "^2.3.1",
     "yaml-jest": "^1.0.5"
   }
