@@ -4,7 +4,7 @@ class Tempo
 
   tick: ->
     tempo = to_tempo ...@args
-    return if @tempo.now_idx === tempo.now_idx
+    return if @tempo.now_idx == tempo.now_idx
     @callback(tempo)
     @tempo = tempo
 
