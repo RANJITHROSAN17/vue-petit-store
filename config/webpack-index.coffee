@@ -3,8 +3,6 @@ webpack = require 'webpack'
 merge = require 'webpack-merge'
 
 nodeExternals = require 'webpack-node-externals'
-CleanWebpackPlugin = require 'clean-webpack-plugin'
-
 current = process.cwd()
 
 coffee =
@@ -45,5 +43,4 @@ module.exports =
   externals: [nodeExternals()] # Important
 
   plugins: [
-    new CleanWebpackPlugin(['lib'])
   ]

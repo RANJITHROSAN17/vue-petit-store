@@ -3,7 +3,7 @@ Mem = require 'memory-orm'
 dexie = null
 poll_request = ->
   return unless document?
-  Dexie = require("dexie/dist/dexie")
+  Dexie = require("dexie").default
   dexie = new Dexie 'poll-web'
   dexie.version(1).stores
     meta: '&idx'
