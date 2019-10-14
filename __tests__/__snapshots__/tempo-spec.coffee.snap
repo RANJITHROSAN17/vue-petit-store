@@ -1,0 +1,335 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`Tempo daily 1`] = `
+Tempo {
+  "args": Array [
+    "1d",
+  ],
+  "callback": [Function],
+  "tempo": Object {
+    "gap": -378000000,
+    "last_at": -32400000,
+    "next_at": 54000000,
+    "now_idx": 4,
+    "remain": 54000000,
+    "since": 32400000,
+    "timeout": 54000000,
+    "timezone": -32400000,
+    "write_at": 0,
+  },
+}
+`;
+
+exports[`Tempo daily 2`] = `
+Tempo {
+  "args": Array [
+    "1d",
+  ],
+  "callback": [Function],
+  "tempo": Object {
+    "gap": -378000000,
+    "last_at": 1570978800000,
+    "next_at": 1571065200000,
+    "now_idx": 18187,
+    "remain": 27132995,
+    "since": 59267005,
+    "timeout": 27132995,
+    "timezone": -32400000,
+    "write_at": 1571038067005,
+  },
+}
+`;
+
+exports[`Tempo daily same time 1`] = `
+Tempo {
+  "args": Array [
+    "1d",
+    "15時40分",
+  ],
+  "callback": [Function],
+  "tempo": Object {
+    "gap": -321600000,
+    "last_at": -62400000,
+    "next_at": 24000000,
+    "now_idx": 3,
+    "remain": 24000000,
+    "since": 62400000,
+    "timeout": 24000000,
+    "timezone": -32400000,
+    "write_at": 0,
+  },
+}
+`;
+
+exports[`Tempo daily same time 2`] = `
+Tempo {
+  "args": Array [
+    "1d",
+    "15時40分",
+  ],
+  "callback": [Function],
+  "tempo": Object {
+    "gap": -321600000,
+    "last_at": 1571035200000,
+    "next_at": 1571121600000,
+    "now_idx": 18187,
+    "remain": 83532994,
+    "since": 2867006,
+    "timeout": 83532994,
+    "timezone": -32400000,
+    "write_at": 1571038067006,
+  },
+}
+`;
+
+exports[`Tempo hourly 1`] = `
+Tempo {
+  "args": Array [
+    "1h",
+  ],
+  "callback": [Function],
+  "tempo": Object {
+    "gap": -378000000,
+    "last_at": 0,
+    "next_at": 3600000,
+    "now_idx": 105,
+    "remain": 3600000,
+    "since": 0,
+    "timeout": 3600000,
+    "timezone": -32400000,
+    "write_at": 0,
+  },
+}
+`;
+
+exports[`Tempo hourly 2`] = `
+Tempo {
+  "args": Array [
+    "1h",
+  ],
+  "callback": [Function],
+  "tempo": Object {
+    "gap": -378000000,
+    "last_at": 1571036400000,
+    "next_at": 1571040000000,
+    "now_idx": 436504,
+    "remain": 1932997,
+    "since": 1667003,
+    "timeout": 1932997,
+    "timezone": -32400000,
+    "write_at": 1571038067003,
+  },
+}
+`;
+
+exports[`Tempo weekly same time 1`] = `
+Tempo {
+  "args": Array [
+    "1w",
+    "1d",
+  ],
+  "callback": [Function],
+  "tempo": Object {
+    "gap": -291600000,
+    "last_at": -291600000,
+    "next_at": 313200000,
+    "now_idx": 0,
+    "remain": 313200000,
+    "since": 291600000,
+    "timeout": 313200000,
+    "timezone": -32400000,
+    "write_at": 0,
+  },
+}
+`;
+
+exports[`Tempo weekly same time 2`] = `
+Tempo {
+  "args": Array [
+    "1w",
+    "1d",
+  ],
+  "callback": [Function],
+  "tempo": Object {
+    "gap": -291600000,
+    "last_at": 1570978800000,
+    "next_at": 1571583600000,
+    "now_idx": 2598,
+    "remain": 545532993,
+    "since": 59267007,
+    "timeout": 545532993,
+    "timezone": -32400000,
+    "write_at": 1571038067007,
+  },
+}
+`;
+
+exports[`to_relative_time_distance snapshot 1`] = `
+Array [
+  25000,
+  25000,
+  25000,
+  "今",
+]
+`;
+
+exports[`to_relative_time_distance snapshot 2`] = `
+Array [
+  -60000,
+  60000,
+  60000,
+  "%s分後",
+]
+`;
+
+exports[`to_relative_time_distance snapshot 3`] = `
+Array [
+  -3600000,
+  3600000,
+  3600000,
+  "%s時間後",
+]
+`;
+
+exports[`to_relative_time_distance snapshot 4`] = `
+Array [
+  -86400000,
+  86400000,
+  86400000,
+  "%s日後",
+]
+`;
+
+exports[`to_relative_time_distance snapshot 5`] = `
+Array [
+  -604800000,
+  604800000,
+  604800000,
+  "%s週間後",
+]
+`;
+
+exports[`to_relative_time_distance snapshot 6`] = `
+Array [
+  -2592000000,
+  2147483647,
+  2592000000,
+  "%sヶ月後",
+]
+`;
+
+exports[`to_relative_time_distance snapshot 7`] = `
+Array [
+  25000,
+  25000,
+  25000,
+  "今",
+]
+`;
+
+exports[`to_relative_time_distance snapshot 8`] = `
+Array [
+  3600000,
+  60000,
+  60000,
+  "%s分前",
+]
+`;
+
+exports[`to_relative_time_distance snapshot 9`] = `
+Array [
+  86400000,
+  3600000,
+  3600000,
+  "%s時間前",
+]
+`;
+
+exports[`to_relative_time_distance snapshot 10`] = `
+Array [
+  604800000,
+  86400000,
+  86400000,
+  "%s日前",
+]
+`;
+
+exports[`to_relative_time_distance snapshot 11`] = `
+Array [
+  2592000000,
+  604800000,
+  604800000,
+  "%s週間前",
+]
+`;
+
+exports[`to_relative_time_distance snapshot 12`] = `
+Array [
+  4503599627370495,
+  2147483647,
+  31556925147,
+  "%s年前",
+]
+`;
+
+exports[`to_relative_time_distance snapshot edge in 52bit 1`] = `
+Array [
+  -31556925147,
+  2147483647,
+  31556925147,
+  "%s年後",
+]
+`;
+
+exports[`to_relative_time_distance snapshot edge in 52bit 2`] = `
+Array [
+  Infinity,
+  2147483647,
+  4503599627370495,
+  "昔",
+]
+`;
+
+exports[`to_relative_time_distance snapshot edge out 52bit 1`] = `
+Array [
+  -4503599627370495,
+  2147483647,
+  31556925147,
+  "？？？",
+]
+`;
+
+exports[`to_relative_time_distance snapshot edge out 52bit 2`] = `
+Array [
+  -4503599627370495,
+  2147483647,
+  31556925147,
+  "？？？",
+]
+`;
+
+exports[`to_timer and to_msec value eng 1`] = `"1s"`;
+
+exports[`to_timer and to_msec value eng 2`] = `"1m1s"`;
+
+exports[`to_timer and to_msec value eng 3`] = `"1h1m1s"`;
+
+exports[`to_timer and to_msec value eng 4`] = `"1d1h1m1s"`;
+
+exports[`to_timer and to_msec value eng 5`] = `"1w1d1h1m1s"`;
+
+exports[`to_timer and to_msec value eng 6`] = `"1y1w1d1h1m1s"`;
+
+exports[`to_timer and to_msec value jpn 1`] = `"1秒"`;
+
+exports[`to_timer and to_msec value jpn 2`] = `"1分1秒"`;
+
+exports[`to_timer and to_msec value jpn 3`] = `"1時1分1秒"`;
+
+exports[`to_timer and to_msec value jpn 4`] = `"1日1時1分1秒"`;
+
+exports[`to_timer and to_msec value jpn 5`] = `"1週1日1時1分1秒"`;
+
+exports[`to_timer and to_msec value jpn 6`] = `"1年1週1日1時1分1秒"`;
+
+exports[`to_timer and to_msec value jpn 7`] = `"52週1日5時48分45秒"`;

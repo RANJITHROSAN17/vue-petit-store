@@ -1,6 +1,6 @@
 class Tempo
   constructor: (...@args, @callback)->
-    @tempo = to_tempo @args[0], "0s", new Date 0
+    @tempo = to_tempo @args[0], @args[1], new Date 0
 
   tick: ->
     tempo = to_tempo ...@args
@@ -13,25 +13,35 @@ to_msec = (str)->
 
 to_sec = (str)->
   timeout = 0
-  str.replace /(\d+)(.)|0/g, (_, num, unit)->
+  str.replace /(\d+)([ヵ]?([smhdwy秒分時日週月年])[間]?)|0/g, (_, num, fullunit, unit)->
     return null unless num = Number num
-    timeout +=
+    timeout += num *
       switch unit
         when "s", "秒"
-          num
+          1
         when "m", "分"
-          60 * num
+          60
         when "h", "時"
-          3600 * num
+          3600
         when "d", "日"
-          3600 * 24 * num
+          3600 * 24
         when "w", "週"
-          3600 * 24 * 7 * num
+          3600 * 24 * 7
         when "y", "年"
-          3600 * 24 * 365 * num
+          31556925.147 # 2019 average.
         else
-          throw new Error "#{timestr} at #{num}#{unit}"
+          throw new Error "#{str} at #{num}#{unit} #{fullunit}"
   timeout
+
+to_timer = (msec, unit_mode = 1)->
+  str = ""
+  for o in TIMERS
+    unit = o[unit_mode]
+    base = o[2]
+    if idx = Math.floor( msec / base )
+      str += "#{idx}#{unit}"
+    msec = msec % base
+  str
 
 to_relative_time_distance = (msec)->
   return DISTANCE_NAN if msec < -VALID || VALID < msec || msec - 0 == NaN
@@ -41,7 +51,7 @@ to_relative_time_distance = (msec)->
 
 to_tempo = (size, gap_str = "0s", write_at = new Date)->
   size = to_msec size
-  gap   = to_msec(gap_str) + timezone
+  gap   = to_msec(gap_str) + tempo_gap
   to_tempo_bare size, gap, write_at - 0
 
 to_tempo_bare = (size, gap, write_at)->
@@ -72,6 +82,17 @@ timezone =
   else
     TIMEZONE_OFFSET_JP
 
+tempo_gap = (- new Date(0).getDay() ) * DAY + timezone
+
+TIMERS = [
+  [ "年", "y", YEAR   ]
+  [ "週", "w", WEEK   ]
+  [ "日", "d", DAY    ]
+  [ "時", "h", HOUR   ]
+  [ "分", "m", MINUTE ]
+  [ "秒", "s", SECOND ]
+]
+
 DISTANCES = [
   DISTANCE_NAN = 
   [   -VALID, INTERVAL,   YEAR, "？？？"]
@@ -96,6 +117,7 @@ DISTANCES = [
 
 module.exports = m = {
   Tempo
+  to_timer
   to_msec
   to_sec
   to_tempo
