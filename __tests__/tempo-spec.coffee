@@ -54,7 +54,7 @@ describe "to_relative_time_distance", =>
     .toMatchSnapshot()
     return
 
-  test 'snapshot', =>
+  test 'snapshot distance', =>
     expect to_relative_time_distance -to_msec "1秒"
     .toMatchSnapshot()
     expect to_relative_time_distance -to_msec "59分59秒"
@@ -79,6 +79,19 @@ describe "to_relative_time_distance", =>
     expect to_relative_time_distance to_msec "1週間"
     .toMatchSnapshot()
     expect to_relative_time_distance to_msec "1年"
+    .toMatchSnapshot()
+    return
+
+  test 'snapshot 半', =>
+    expect to_timer to_msec "1秒半"
+    .toMatchSnapshot()
+    expect to_timer to_msec "1分半"
+    .toMatchSnapshot()
+    expect to_timer to_msec "1時間半"
+    .toMatchSnapshot()
+    expect to_timer to_msec "1日半"
+    .toMatchSnapshot()
+    expect to_timer to_msec "1年半"
     .toMatchSnapshot()
     return
   return

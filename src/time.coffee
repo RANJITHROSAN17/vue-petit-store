@@ -13,8 +13,10 @@ to_msec = (str)->
 
 to_sec = (str)->
   timeout = 0
-  str.replace /(\d+)([ヵ]?([smhdwy秒分時日週月年])[間]?)|0/g, (_, num, fullunit, unit)->
+  str.replace /(\d+)([ヵ]?([smhdwy秒分時日週月年])[間]?(半$)?)|0/g, (full, num, fullunit, unit, appendix)->
     return null unless num = Number num
+    if '半' == appendix
+      num += 0.5
     timeout += num *
       switch unit
         when "s", "秒"
@@ -30,7 +32,7 @@ to_sec = (str)->
         when "y", "年"
           31556925.147 # 2019 average.
         else
-          throw new Error "#{str} at #{num}#{unit} #{fullunit}"
+          throw new Error "#{str} at #{num}#{unit}"
   timeout
 
 to_timer = (msec, unit_mode = 1)->
@@ -52,17 +54,35 @@ to_relative_time_distance = (msec)->
 to_tempo = (size, gap_str = "0s", write_at = new Date)->
   size = to_msec size
   gap   = to_msec(gap_str) + tempo_gap
-  to_tempo_bare size, gap, write_at - 0
+  to_tempo_bare size, gap, write_at - 0, 0
 
 to_tempo_bare = (size, gap, write_at)->
   now_idx = Math.floor(( write_at - gap) / size)
   last_at = (now_idx + 0) * size + gap
   next_at = (now_idx + 1) * size + gap
-  remain = next_at - write_at
-  since  = write_at - last_at
+  remain  =  next_at - write_at
+  since   = write_at -  last_at
   timeout = remain
 
-  { last_at, write_at, next_at, timeout, now_idx, timezone, remain, since, gap }
+  { last_at, write_at, next_at, timeout, now_idx, remain, since, gap, size }
+
+to_tempo_by = (table, gap, write_at)->
+  scan_at = write_at - gap
+  last_at = 0
+  for next_at, idx in table when scan_at < next_at
+    last_at = table[idx - 1] || 0
+    break
+
+  next_at += gap
+  last_at += gap
+
+  size   =  next_at -  last_at
+  remain =  next_at - write_at
+  since  = write_at -  last_at
+  timeout = remain
+  now_idx = idx
+
+  { last_at, write_at, next_at, timeout, now_idx, remain, since, gap, size, scan_at }
 
 SECOND = to_msec  "1s"
 MINUTE = to_msec  "1m"
@@ -122,6 +142,7 @@ module.exports = m = {
   to_sec
   to_tempo
   to_tempo_bare
+  to_tempo_by
   to_relative_time_distance
   timezone
 }

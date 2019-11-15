@@ -3,7 +3,7 @@ localVue = createLocalVue()
 Vuex = require 'vuex'
 VueRouter = require 'vue-router'
 
-live = require "~/../giji-fire-new/config/live.yml"
+live = require "~/../giji-fire-new/app/config/live.yml"
 firebase = require "firebase/app"
 require 'firebase/firestore'
 

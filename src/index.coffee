@@ -1,7 +1,8 @@
 module.exports = {
-  ...require "./time"
   ...require "./struct"
+  ...require "./time"
   ...require "./timer"
+  ...require "./calendar"
   ...require "./uri"
   ...require "./curtain"
   ...require "./observer"
@@ -11,4 +12,5 @@ module.exports = {
   ...require "./poll"
   ...require "./path"
   ...require "./vue"
+  ...require "./form"
 }

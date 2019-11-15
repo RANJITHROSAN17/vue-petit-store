@@ -6,7 +6,7 @@ module.exports = m =
     computed = {}
     computed[idx_a] =
       get: ->
-        @[idx].split("-")
+        @[idx]?.split("-") || []
 
     keys.forEach (name, at)->
       return unless name

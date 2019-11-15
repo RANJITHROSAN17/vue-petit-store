@@ -1,6 +1,6 @@
 {
   "name": "vue-petit-store",
-  "version": "0.8.35",
+  "version": "0.8.37",
   "description": "petit store for vue mixin",
   "main": "lib/index.min.js",
   "repository": "git@github.com:7korobi/vue-petit-store.git",

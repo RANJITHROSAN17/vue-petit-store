@@ -76,7 +76,7 @@ relative = (id, { limit, format } = {})->
       to_relative_time_distance @[msec_id]
 
     [tempo_id]: ->
-      [_, interval] = @[distance_id]
+      [, interval] = @[distance_id]
       to_tempo_bare interval, 0, @[msec_id]
 
     [text_id]: ->
