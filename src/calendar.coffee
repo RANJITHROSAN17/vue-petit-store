@@ -177,7 +177,7 @@ export class FictionalDate
   def_zero: ->
     zero_size = (path, idx = 0)=>
       0 - (@calc.idx[path] - idx) * @calc.msec[path]
-    zero   = - @dic.tz_offset
+    zero   = 0 # - @dic.tz_offset
     second = zero   + zero_size "second"
     minute = second + zero_size "minute"
     hour   = minute + zero_size "hour"
@@ -189,10 +189,10 @@ export class FictionalDate
     year   = month - @table.msec.year[         @calc.idx.year  - 1 ] || 0
     period = year  + zero_size "period"
 
-    week   = day   + zero_size "week"
+    week   = day   + zero_size("week") / @calc.divs.week
     moon   = day   + zero_size "moon"
 
-    calc_set.call @, "zero", { period }
+    calc_set.call @, "zero", { period, week,   month, day, hour, minute, second }
 
   slice: (now)->
     period = ([zero, b_size], path)=>
@@ -211,6 +211,8 @@ export class FictionalDate
 
     # period in epoch
     p = period [@calc.zero.period], "period"
+    w = period [@calc.zero.week  ], "week"
+    console.warn w, @calc.zero
     # year   in period
     y = period p, "year"
     # month  in year
@@ -220,7 +222,6 @@ export class FictionalDate
 
     #        in year appendix
     D = period y, "day"
-    w = period y, "week"
     n = period y, "moon"
 
     # day    in week (曜日)
@@ -278,7 +279,7 @@ FictionalDate.Gregorian = g = new FictionalDate()
     27
   )
   .yeary(
-    ['日', '月', '火', '水', '木', '金', '土']
+    ['月', '火', '水', '木', '金', '土', '日']
     ['睦月','如月','弥生','卯月','皐月','水無月','文月','葉月','長月','神無月','霜月','師走']
     [  31 ,   0 ,  31 ,  30 ,  31 ,   30 ,  31 ,  31 ,  30 ,    31 ,  30 ,  31 ]
   )
