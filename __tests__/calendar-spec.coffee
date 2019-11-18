@@ -65,11 +65,11 @@ describe "Gregorian", =>
 
     expect [
       g.format new Date("2019/02/19 08:04"), format
-      g.format new Date("2019/03/06 06:10"), format
+      g.format new Date("2019/03/06 11:06"), format
       g.format new Date("2019/03/21 06:58"), format
       g.format new Date("2019/04/05 10:51"), format
-      g.format new Date("2019/04/20 17:55"), format
-      g.format new Date("2019/05/06 04:03"), format
+      g.format new Date("2019/04/21 02:49"), format
+      g.format new Date("2019/05/06 08:04"), format
       g.format new Date("2019/05/21 16:59"), format
       g.format new Date("2019/06/06 08:06"), format
       g.format new Date("2019/06/22 00:54"), format
@@ -88,11 +88,11 @@ describe "Gregorian", =>
     ].join("\n")
     .toEqual [
       "西暦2019年2月19日(火) 8時4分 雨水"
-      "西暦2019年3月6日(水) 6時10分 啓蟄"
+      "西暦2019年3月6日(水) 11時6分 啓蟄" # "西暦2019年3月6日(水) 6時10分 啓蟄"
       "西暦2019年3月21日(木) 6時58分 啓蟄"
       "西暦2019年4月5日(金) 10時51分 春分"
-      "西暦2019年4月20日(土) 17時55分 穀雨"
-      "西暦2019年5月6日(月) 4時3分 立夏"
+      "西暦2019年4月21日(日) 2時49分 穀雨" # "西暦2019年4月20日(土) 17時55分 穀雨"
+      "西暦2019年5月6日(月) 8時4分 立夏" # "西暦2019年5月6日(月) 4時3分 立夏"
       "西暦2019年5月21日(火) 16時59分 小満"
       "西暦2019年6月6日(木) 8時6分 芒種"
       "西暦2019年6月22日(土) 0時54分 夏至"
@@ -130,27 +130,8 @@ describe "Gregorian", =>
       "西暦1973年3月3日(土)18時 雨水"
       "西暦1970年4月27日(月)2時 穀雨"
       "西暦1970年1月1日(木)9時 冬至"
-      "紀元前1年1月1日(土)9時 冬至"
+      "紀元前1年1月1日(土)0時 冬至"
     ].join("\n")
-    return
-
-  test 'parse', =>
-    expect [
-      g.parse "1970年1月1日"
-      g.parse "1970年4月27日"
-      g.parse "1973年3月3日"
-      g.parse "2001年9月9日"
-      g.parse "2286年11月21日"
-      g.parse "5138年11月16日"
-    ]
-    .toEqual [
-     -32400000
-     9990000000
-     99932400000
-     999961200000
-     9999990000000
-     99999932400000
-    ]
     return
 
   test 'parse → fomat cycle', =>
@@ -168,6 +149,25 @@ describe "Gregorian", =>
       "西暦2286年11月21日(日)0時0分0秒"
       "西暦5138年11月16日(水)0時0分0秒"
     ].join("\n")
+    return
+
+
+  test 'ranges', =>
+    at = g.parse("2020年2月1日")
+    expect g.ranges at, 'M'
+    .toMatchSnapshot()
+    expect g.ranges at, 'd'
+    .toMatchSnapshot()
+    expect g.ranges at, 'Z'
+    .toMatchSnapshot()
+    expect g.ranges at, 'e'
+    .toMatchSnapshot()
+    expect g.ranges at, 'H'
+    .toMatchSnapshot()
+    expect g.ranges at, 'm'
+    .toMatchSnapshot()
+    expect g.ranges at, 's'
+    .toMatchSnapshot()
     return
   return
 

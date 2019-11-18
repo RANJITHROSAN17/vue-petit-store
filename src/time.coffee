@@ -67,10 +67,12 @@ to_tempo_bare = (size, gap, write_at)->
   { last_at, write_at, next_at, timeout, now_idx, remain, since, gap, size }
 
 to_tempo_by = (table, gap, write_at)->
-  scan_at = write_at - gap
+  scan_at = (write_at - gap) % table[-1..][0]
   last_at = 0
-  for next_at, idx in table when scan_at < next_at
-    last_at = table[idx - 1] || 0
+  for next_at, idx in table
+    unless scan_at < next_at
+      last_at = next_at
+      continue
     break
 
   next_at += gap
@@ -82,7 +84,7 @@ to_tempo_by = (table, gap, write_at)->
   timeout = remain
   now_idx = idx
 
-  { last_at, write_at, next_at, timeout, now_idx, remain, since, gap, size, scan_at }
+  { last_at, write_at, next_at, timeout, now_idx, remain, since, gap, size, scan_at, table }
 
 SECOND = to_msec  "1s"
 MINUTE = to_msec  "1m"

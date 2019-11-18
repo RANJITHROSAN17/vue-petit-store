@@ -1,6 +1,7 @@
 
 {
   timezone
+  by_tempo
   to_timer
   to_msec
   to_sec
@@ -169,12 +170,12 @@ export class FictionalDate
       month[size * day] = upto range.month[size]
 
     @table = { range, msec: { year, month } }
-    (path, _1, b_size, _3)->
+    ({ size }, path)->
       switch path
         when 'year'
           year
         when 'month'
-          month[b_size]
+          month[size]
         else
           null
 
@@ -185,7 +186,7 @@ export class FictionalDate
       for i in src
         msec += i * day
 
-    (path, zero, _2, b_idx)-> null
+    ({ last_at, size, now_idx }, path)-> null
 
   def_table: ->
     @get_table = 
@@ -214,51 +215,55 @@ export class FictionalDate
     second = second - 0
     moon   = @dic.moon_idx
     week   = @dic.weeks.indexOf week
-    { period, year, month, moon, week, day, hour, minute, second }
+    season = @dic.seasons.indexOf '春分'
+    { period, year, month, moon, week, day, hour, minute, second, season }
 
   def_zero: ->
     zero_size = (path, idx = 0)=>
       0 - (@calc.idx[path] - idx) * @calc.msec[path]
-    zero   = 0 - @dic.start_at
+    zero   = 0 - @dic.tz_offset - @dic.start_at
     second = zero   + zero_size "second"
     minute = second + zero_size "minute"
     hour   = minute + zero_size "hour"
     day    = hour   + zero_size "day", 1
 
-    yeary   = @calc.msec.day * @table.range.year[ @calc.idx.year %% @calc.divs.period ]
+    if @dic.leaps?
+      year_size   = @calc.msec.day * @table.range.year[ @calc.idx.year %% @calc.divs.period ]
 
-    month  = day   - @table.msec.month[yeary][ @calc.idx.month - 2 ] || 0
-    year   = month - @table.msec.year[         @calc.idx.year  - 1 ] || 0
+      month  = day   - (@table.msec.month[year_size][ @calc.idx.month - 2 ] || 0)
+      year   = month - (@table.msec.year[         @calc.idx.year  - 1 ] || 0)
+    else
+      month  = day   + zero_size "month"
+      year   = month + zero_size "year"
+
     period = year  + zero_size "period"
 
     week   = day   + zero_size("week") / @calc.divs.week
 
     # 単純のため平気法。春分点から立春点を求める。
-    season_idx  = @dic.seasons.indexOf '春分'
-    season_zero = @calc.msec.year * season_idx / @dic.seasons.length
-    { since } = o = to_tempo_bare @calc.msec.year, year, @dic.ecliptic_zero - season_zero
+    season_zero = zero - @calc.msec.year * @calc.idx.season / @dic.seasons.length
+    { since } = o = to_tempo_bare @calc.msec.year, year, @dic.ecliptic_zero + season_zero
     season = since
-    moon   = day   + zero_size "moon"
+    moon   = zero + zero_size "moon"
+    { period, week, season, moon }
 
-    console.warn zero: { zero, day, week, season, month, year }
-
-    { period, week, season }
-
-  slice: (utc)->
-    now = utc - 0 + @dic.tz_offset
+  to_tempos: (utc)->
     period = (base, path)=>
-      table = @get_table path, ...base
-      { last_at, now_idx, size } = o =
-        if table
-          to_tempo_by table, base[0], now
-        else
-          b_size = @calc.msec[path]
-          to_tempo_bare b_size, base[0], now
-      [last_at, size, now_idx]
+      table = @get_table base, path
+      if table
+        o = to_tempo_by table, base.last_at, utc
+      else
+        b_size = @calc.msec[path]
+        o = to_tempo_bare b_size, base.last_at, utc
+        o.length = base.size / o.size
+      o.path = path
+      o
 
     # period in epoch
-    p  = period [@calc.zero.period], "period"
-    w  = period [@calc.zero.week  ], "week"
+    p  = to_tempo_bare @calc.msec.period, @calc.zero.period, utc
+    w  = to_tempo_bare @calc.msec.week,   @calc.zero.week,   utc
+    n  = to_tempo_bare @calc.msec.moon,   @calc.zero.moon,   utc
+    Zz = to_tempo_bare @calc.msec.year,   @calc.zero.season, utc 
 
     # year   in period
     y = period p, "year"
@@ -269,13 +274,10 @@ export class FictionalDate
 
     #        in year appendix
     D = period y, "day"
-    n = period y, "moon"
 
     # season in year_of_planet
-    { last_at, size, now_idx } = to_tempo_bare @calc.msec.year, @calc.zero.season, now 
-    Zy = [ last_at, size, now_idx ]
-    Z = period Zy, "season"
-    console.warn [Z[2] / 2, M[2]]
+    Z = period Zz, "season"
+    console.warn [Z.now_idx / 2, M.now_idx]
 
     # day    in week (曜日)
     e = period w, "day"
@@ -285,26 +287,30 @@ export class FictionalDate
     # minute in day
     m = period H, "minute"
     s = period m, "second"
+    now_idx = utc - s.last_at
+    S = { now_idx }
+    { p, y,M,d, D,w,e, H,m,s,S, Z }
 
-    y[2] = y[2] + p[2] * @calc.divs.period
-    y[2] =
-      if 0 < y[2]
-        G = [ null, null, 0 ]
-        y[2] + "年"
+  to_labels: ({ p, y,M,d, D,w,e, H,m,s,S, Z })->
+    y.label = y.now_idx + p.now_idx * @calc.divs.period
+    y.label =
+      if 0 < y.label
+        G = { now_idx: 0 }
+        y.label + "年"
       else
-        G = [ null, null, 1 ]
-        1 - y[2] + "年"
+        G = { now_idx: 1 }
+        1 - y.label + "年"
+    G.label = @dic.era[ G.now_idx ]
 
-    e[2] = @dic.weeks[ e[2] ]
-    Z[2] = @dic.seasons[ Z[2] ]
+    M.label = @dic.months[ M.now_idx ]
+    d.label = d.now_idx + 1 + "日"
+    H.label = @dic.hours[ H.now_idx ]
+    m.label = @dic.minutes[ m.now_idx ]
+    s.label = s.now_idx + "秒"
+    S.label = ("" + (S.now_idx / @calc.msec.second))[2..]
 
-    G[2] = @dic.era[ G[2] ]
-    M[2] = @dic.months[ M[2] ]
-    d[2] = d[2] + 1 + "日"
-    H[2] = @dic.hours[ H[2] ]
-    m[2] = @dic.minutes[ m[2] ]
-    s[2] = s[2] + "秒"
-    S = [ null, null, now - s[0]]
+    e.label = @dic.weeks[ e.now_idx ]
+    Z.label = @dic.seasons[ Z.now_idx ]
 
     { G, p, y,M,d, D,w,e, H,m,s,S, Z }
 
@@ -353,6 +359,35 @@ export class FictionalDate
     S = (s)=> s[..-2] - 0
     { G, y,M,d, H,m,s,S }
 
+  tempo_list: (tempos, token)->
+    switch token[0]
+      when 'G'
+        throw new Error "request token can't tempos. [#{token}]"
+
+    unless tempo = tempos[token[0]]
+      throw new Error "request token can't tempos. [#{token}]"
+
+    { table, length, now_idx, last_at, size, gap } = tempo
+    list = []
+    if table
+      last_at = gap
+      for next_at, now_idx in table
+        next_at += gap
+        size = next_at - last_at
+        list.push { now_idx, size, last_at, next_at, last_time: new Date(last_at), next_time: new Date(next_at) }
+        last_at = next_at
+
+    if length
+      base = last_at - size * now_idx
+      for now_idx in [0..length]
+        last_at = (now_idx + 0) * size + gap
+        next_at = (now_idx + 1) * size + gap
+        list.push { now_idx, size, last_at, next_at, last_time: new Date(last_at), next_time: new Date(next_at) }
+    list
+
+  ranges: (utc, token)->
+    @tempo_list @to_tempos(utc), token
+
   parse: (tgt, str = default_parse_format)->
     { p,y,M,d,H,m,s,S } = @index tgt, str
 
@@ -374,15 +409,14 @@ export class FictionalDate
     ( H * @calc.msec.hour ) +
     ( m * @calc.msec.minute ) +
     ( s * @calc.msec.second ) +
-    ( S ) - @dic.tz_offset
-
+    ( S )
 
   format: (utc, str = default_format_format)->
-    o = @slice utc
+    o = @to_labels @to_tempos utc
     str.match reg_token
     .map (token)->
       if val = o[token[0]]
-        val[2]
+        val.label
       else
         token
     .join("")
@@ -395,7 +429,7 @@ EARTH = [
   2551442889.6
   to_msec('1d')
   new Date("2019/03/21 6:58").getTime()
-  23.4
+  23.4397
   [ 35, 135 ]
 ]
 
@@ -468,9 +502,22 @@ if false
         '下限','下限','下限'  ,'下限' ,'下限','下限' ,'下限'  ,'下限' ,'晦'    ,'晦'  ]
     )
     .daily(
-      ['夜九つ','夜八つ','暁七つ','明六つ','朝五つ','昼四つ','昼九つ','昼八つ','夕七つ','暮六つ','宵五つ','夜四つ']
+      ['夜九つ','夜八つ','暁七つ',
+       '明六つ','朝五つ','昼四つ',
+       '昼九つ','昼八つ','夕七つ',
+       '暮六つ','宵五つ','夜四つ'
+      ]
       ['一つ','二つ','三つ','四つ']
     )
     .init()
 
 module.exports = FictionalDate
+
+{ PI, atan2, sin, cos, tan } = Math
+rad = PI / 180
+e = rad * 23.4397;
+right_ascension = ( l, b )-> atan2 sin(l) * cos(e) - tan(b) * sin(e),  cos(l)
+declination     = ( l, b )-> asin  sin(b) * cos(e) + cos(b) * sin(e) * sin(l)
+azmith   = ( H, phi, dec )-> atan2 sin(H), cos(H) * sin(phi) - tan(dec) * cos(phi)
+altitude = ( H, phi, dec )-> asin  sin(phi) * sin(dec) + cos(phi) * cos(dec) * cos(H)
+siderealTime    = ( d,lw )-> rad * ( 280.16 + 360.9856235 * d ) - lw
