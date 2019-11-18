@@ -2,6 +2,100 @@
 
 exports[`define data 1`] = `
 Object {
+  "divs": Object {
+    "period": 400,
+    "week": 7,
+  },
+  "gap": Object {},
+  "idx": Object {
+    "day": 1,
+    "hour": 0,
+    "minute": 0,
+    "month": 1,
+    "moon": 27,
+    "period": 4,
+    "second": 0,
+    "week": 4,
+    "year": 370,
+  },
+  "msec": Object {
+    "day": 86400000,
+    "hour": 3600000,
+    "minute": 60000,
+    "month": 2629743762.25,
+    "moon": 2551442889.6,
+    "period": 12622780800000,
+    "season": 1314871881.125,
+    "second": 1000,
+    "week": 604800000,
+    "year": 31556925147,
+  },
+  "msec_max": Object {
+    "day": 86400000,
+    "hour": 3600000,
+    "minute": 60000,
+    "month": 2678400000,
+    "moon": 2592000000,
+    "period": 12622780800000,
+    "season": 1314871881.125,
+    "second": 1000,
+    "week": 604800000,
+    "year": 31622400000,
+  },
+  "msec_min": Object {
+    "day": 86400000,
+    "hour": 3600000,
+    "minute": 60000,
+    "month": 2592000000,
+    "moon": 2505600000,
+    "period": 12622780800000,
+    "season": 1314871881.125,
+    "second": 1000,
+    "week": 604800000,
+    "year": 31536000000,
+  },
+  "range": Object {
+    "day": Array [
+      1,
+    ],
+    "hour": Array [
+      24,
+    ],
+    "minute": Array [
+      60,
+    ],
+    "month": Array [
+      30,
+      31,
+    ],
+    "moon": Array [
+      29,
+      30,
+    ],
+    "season": Array [
+      24,
+    ],
+    "second": Array [
+      60,
+    ],
+    "week": Array [
+      7,
+    ],
+    "year": Array [
+      365,
+      366,
+    ],
+  },
+  "zero": Object {
+    "period": -62167219200000,
+    "season": 2918827763.625,
+    "week": -345600000,
+  },
+}
+`;
+
+exports[`define data 2`] = `
+Object {
   "axtial_tilt": 23.4,
   "ecliptic_zero": 1553119080000,
   "era": Array [
@@ -121,7 +215,6 @@ Object {
     30,
     31,
   ],
-  "month_sum": 337,
   "months": Array [
     "1月",
     "2月",

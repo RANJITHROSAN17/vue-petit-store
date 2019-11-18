@@ -4,6 +4,8 @@ g = Gregorian
 
 describe "define", =>
   test 'data', =>
+    expect g.calc
+    .toMatchSnapshot()
     expect g.dic
     .toMatchSnapshot()
     expect g.calc.msec.period
@@ -25,14 +27,12 @@ describe "令和", =>
       令和.format 10000000000000, format
       令和.format new Date("2019-5-1").getTime(), format
       令和.format 1000000000000, format
-      令和.format 100000000000, format
     ].join("\n")
     .toEqual [
       "令和3120年11月16日(水)18時 立冬"
-      "令和2286年11月21日(日)2時 小雪"
+      "令和268年11月21日(日)2時 小雪"
       "令和1年5月1日(水)0時 穀雨"
       "令和前18年9月9日(日)10時 白露"
-      "令和前46年3月3日(土)18時 雨水"
     ].join("\n")
     return
   return
@@ -121,7 +121,7 @@ describe "Gregorian", =>
       g.format 10000000000, format
       g.format 0, format
       g.format g.calc.zero.period, format
-    ]
+    ].join("\n")
     .toEqual [
       "西暦5138年11月16日(水)18時 立冬"
       "西暦2286年11月21日(日)2時 小雪"
@@ -131,45 +131,43 @@ describe "Gregorian", =>
       "西暦1970年4月27日(月)2時 穀雨"
       "西暦1970年1月1日(木)9時 冬至"
       "紀元前1年1月1日(土)9時 冬至"
-    ]
+    ].join("\n")
     return
 
   test 'parse', =>
-    expect g.parse "1970年1月1日"
-    .toEqual 0
-
-    expect g.parse "1970年4月27日"
-    .toEqual 10022400000
-
-    expect g.parse "1973年3月3日"
-    .toEqual 99964800000
-
-    expect g.parse "2001年9月9日"
-    .toEqual 999993600000
-
-    expect g.parse "2286年11月21日"
-    .toEqual 10000022400000
-
-    expect g.parse "5138年11月16日"
-    .toEqual 99999964800000
+    expect [
+      g.parse "1970年1月1日"
+      g.parse "1970年4月27日"
+      g.parse "1973年3月3日"
+      g.parse "2001年9月9日"
+      g.parse "2286年11月21日"
+      g.parse "5138年11月16日"
+    ]
+    .toEqual [
+     -32400000
+     9990000000
+     99932400000
+     999961200000
+     9999990000000
+     99999932400000
+    ]
     return
 
   test 'parse → fomat cycle', =>
-    expect g.format g.parse "1970年4月27日"
-    .toEqual "西暦1970年4月27日(月)9時0分0秒"
-
-    expect g.format g.parse "1973年3月3日"
-    .toEqual "西暦1973年3月3日(土)9時0分0秒"
-
-    expect g.format g.parse "2001年9月9日"
-    .toEqual "西暦2001年9月9日(日)9時0分0秒"
-
-    expect g.format g.parse "2286年11月21日"
-    .toEqual "西暦2286年11月21日(日)9時0分0秒"
-
-    expect g.format g.parse "5138年11月16日"
-    .toEqual "西暦5138年11月16日(水)9時0分0秒"
-
+    expect [
+      g.format g.parse "1970年4月27日"
+      g.format g.parse "1973年3月3日"
+      g.format g.parse "2001年9月9日"
+      g.format g.parse "2286年11月21日"
+      g.format g.parse "5138年11月16日"
+    ].join("\n")
+    .toEqual [
+      "西暦1970年4月27日(月)0時0分0秒"
+      "西暦1973年3月3日(土)0時0分0秒"
+      "西暦2001年9月9日(日)0時0分0秒"
+      "西暦2286年11月21日(日)0時0分0秒"
+      "西暦5138年11月16日(水)0時0分0秒"
+    ].join("\n")
     return
   return
 

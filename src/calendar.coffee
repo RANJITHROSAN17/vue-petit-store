@@ -84,17 +84,7 @@ export class FictionalDate
     calc_set.call @, "msec",     { month, week }
     calc_set.call @, "msec_min", { month, week }
     calc_set.call @, "msec_max", { month, week }
-
-    unless month_ranges
-      month_ranges =
-        for str, idx in months
-          @calc.range.month[1 - idx % 2]
-    month_ranges[1] = 0
-    month_sum = 0
-    for range in month_ranges
-      month_sum += range
-
-    Object.assign @dic, { weeks, months, month_ranges, month_sum }
+    Object.assign @dic, { weeks, months, month_ranges }
     @
 
   moony: (moons)->
@@ -126,13 +116,18 @@ export class FictionalDate
     @
 
   init: ->
-    @table = @def_table()
-    calc_set.call @, "idx",  @def_calc()
+    @def_table()
+    calc_set.call @, "idx",  @def_idx()
     calc_set.call @, "zero", @def_zero()
     @
 
-  def_table: ->
+  def_table_by_leap_year: ->
     day = @calc.msec.day
+    upto = (src)->
+      msec = 0
+      for i in src
+        msec += i * day
+
     [...leaps, period] = @dic.leaps
 
     range =
@@ -146,16 +141,21 @@ export class FictionalDate
     range.year[0] = @calc.range.year[1]
     years = _.uniq range.year
 
-    range.month = month = {}
-    for size in years
-      a = Array.from @dic.month_ranges
-      a[1] = size - @dic.month_sum
-      month[size] = a
+    { month_ranges, months } = @dic
+    unless month_ranges
+      month_ranges =
+        for str, idx in months
+          @calc.range.month[1 - idx % 2]
+      month_ranges[1] = 0
+    month_sum = 0
+    for i in month_ranges
+      month_sum += i
 
-    upto = (src)->
-      msec = 0
-      for i in src
-        msec += i * day
+    range.month = {}
+    for size in years
+      a = Array.from month_ranges
+      a[1] = size - month_sum
+      range.month[size] = a
 
     year = upto range.year
     period = year[year.length - 1]
@@ -168,23 +168,40 @@ export class FictionalDate
     for size in years
       month[size * day] = upto range.month[size]
 
-    { range, msec: { year, month } }
+    @table = { range, msec: { year, month } }
+    (path, _1, b_size, _3)->
+      switch path
+        when 'year'
+          year
+        when 'month'
+          month[b_size]
+        else
+          null
 
-  def_calc: ->
+  def_table_by_season: ->
+    day = @calc.msec.day
+    upto = (src)->
+      msec = 0
+      for i in src
+        msec += i * day
+
+    (path, zero, _2, b_idx)-> null
+
+  def_table: ->
+    @get_table = 
+      if @dic.leaps?
+        @def_table_by_leap_year()
+      else
+        @def_table_by_season()
+
+  def_idx: ->
     [..., full_period] = @dic.leaps
 
     period = full_period
-    year   = @dic.months.length
-    month  = Math.max ...@calc.range.month
-    day    = @dic.hours.length
-    hour   = @dic.minutes.length
-    minute = @calc.msec.minute / @calc.msec.second
-    second = @calc.msec.second
-    moon   = Math.min ...@calc.range.moon
     week   = @dic.weeks.length
-    calc_set.call @, "divs", { period, year, month, moon, week, day, hour, minute, second }
+    calc_set.call @, "divs", { period, week }
 
-    [,year, month, day, week, hour, minute, second] = @dic.start.match reg_parse
+    console.warn [,year, month, day, week, hour, minute, second] = @dic.start.match reg_parse
 
     year   = year   - 0
     period = Math.floor year / @calc.divs.period
@@ -202,7 +219,7 @@ export class FictionalDate
   def_zero: ->
     zero_size = (path, idx = 0)=>
       0 - (@calc.idx[path] - idx) * @calc.msec[path]
-    zero   = 0
+    zero   = 0 - @dic.start_at
     second = zero   + zero_size "second"
     minute = second + zero_size "minute"
     hour   = minute + zero_size "hour"
@@ -223,25 +240,20 @@ export class FictionalDate
     season = since
     moon   = day   + zero_size "moon"
 
+    console.warn zero: { zero, day, week, season, month, year }
+
     { period, week, season }
 
-  slice: (now)->
-    now = now + @dic.tz_offset - @dic.start_at
-    period = ([zero, b_size], path)=>
-      table = 
-        switch path
-          when 'year'
-            @table.msec.year
-          when 'month'
-            @table.msec.month[b_size]
-          else
-            null
+  slice: (utc)->
+    now = utc - 0 + @dic.tz_offset
+    period = (base, path)=>
+      table = @get_table path, ...base
       { last_at, now_idx, size } = o =
         if table
-          to_tempo_by table, zero, now
+          to_tempo_by table, base[0], now
         else
           b_size = @calc.msec[path]
-          to_tempo_bare b_size, zero, now
+          to_tempo_bare b_size, base[0], now
       [last_at, size, now_idx]
 
     # period in epoch
@@ -263,6 +275,7 @@ export class FictionalDate
     { last_at, size, now_idx } = to_tempo_bare @calc.msec.year, @calc.zero.season, now 
     Zy = [ last_at, size, now_idx ]
     Z = period Zy, "season"
+    console.warn [Z[2] / 2, M[2]]
 
     # day    in week (曜日)
     e = period w, "day"
@@ -341,22 +354,31 @@ export class FictionalDate
     { G, y,M,d, H,m,s,S }
 
   parse: (tgt, str = default_parse_format)->
-    data = @index tgt, str
-    size =
-      @table.range.year[data.y] * @calc.msec.day
+    { p,y,M,d,H,m,s,S } = @index tgt, str
+
+    in_period =
+      if @dic.leaps?
+        size =
+          @table.range.year[y] * @calc.msec.day
+        ( @table.msec.year[y - 1] || 0 ) +
+        ( @table.msec.month[size][M - 1] || 0 )
+      else
+        ( y * @calc.msec.year) +
+        ( M * @calc.msec.month )
 
     @calc.zero.period +
-    ( data.p * @calc.msec.period ) +
-    ( @table.msec.year[data.y - 1] || 0 ) +
-    ( @table.msec.month[size][data.M - 1] || 0 ) +
-    ( data.d * @calc.msec.day ) +
-    ( data.H * @calc.msec.hour ) +
-    ( data.m * @calc.msec.minute ) +
-    ( data.s * @calc.msec.second ) +
-    ( data.S )
+    ( p * @calc.msec.period ) +
+    in_period +
+    # dic.season
+    ( d * @calc.msec.day ) +
+    ( H * @calc.msec.hour ) +
+    ( m * @calc.msec.minute ) +
+    ( s * @calc.msec.second ) +
+    ( S ) - @dic.tz_offset
 
-  format: (now, str = default_format_format)->
-    o = @slice now - 0
+
+  format: (utc, str = default_format_format)->
+    o = @slice utc
     str.match reg_token
     .map (token)->
       if val = o[token[0]]
@@ -370,7 +392,7 @@ export class FictionalDate
 
 EARTH = [
   to_msec('1y')
-  2551442881
+  2551442889.6
   to_msec('1d')
   new Date("2019/03/21 6:58").getTime()
   23.4
@@ -410,7 +432,7 @@ FictionalDate.平成 = g.dup()
   )
   .calendar(
     ["平成", "平成前"]
-    "1年1月8日(木)0時0分0秒"
+    "1年1月8日(日)0時0分0秒"
     new Date("1989-1-8").getTime()
   )
   .init()
@@ -420,36 +442,35 @@ FictionalDate.令和 = g.dup()
   )
   .calendar(
     ["令和", "令和前"]
-    "1年5月1日(木)0時0分0秒"
+    "1年5月1日(水)0時0分0秒"
     new Date("2019-5-1").getTime()
   )
   .init()
 
-###
-FictionalDate.へいきほう = new FictionalDate()
-  .planet ...EARTH
-  .calendar(
-    ["", "前"]
-    null
-    "1970年1月1日(木)0時0分0秒"
-    0
-    27
-  )
-  .yeary(
-    ["先勝","友引","先負","仏滅","大安","赤口"]
-    ['睦月','如月','弥生','卯月','皐月','水無月','文月','葉月','長月','神無月','霜月','師走']
-    null
-  )
-  .moony(
-    ['朔'  ,'既朔','三日月','上弦' ,'上弦','上弦' ,'上弦'  ,'上弦' ,'上弦'  ,'上弦' ,
-     '上弦','上弦','十三夜','小望月','満月','十六夜','立待月','居待月','臥待月','更待月',
-     '下限','下限','下限'  ,'下限' ,'下限','下限' ,'下限'  ,'下限' ,'晦'    ,'晦'  ]
-  )
-  .daily(
-    ['夜九つ','夜八つ','暁七つ','明六つ','朝五つ','昼四つ','昼九つ','昼八つ','夕七つ','暮六つ','宵五つ','夜四つ']
-    ['一つ','二つ','三つ','四つ']
-  )
-  .init()
-###
+if false
+  FictionalDate.平気法 = new FictionalDate()
+    .planet ...EARTH
+    .calendar(
+      ["", "前"]
+      "1970年1月1日(木)0時0分0秒"
+      0
+      null
+      27
+    )
+    .yeary(
+      ["先勝","友引","先負","仏滅","大安","赤口"]
+      ['睦月','如月','弥生','卯月','皐月','水無月','文月','葉月','長月','神無月','霜月','師走']
+      null
+    )
+    .moony(
+      ['朔'  ,'既朔','三日月','上弦' ,'上弦','上弦' ,'上弦'  ,'上弦' ,'上弦'  ,'上弦' ,
+        '上弦','上弦','十三夜','小望月','満月','十六夜','立待月','居待月','臥待月','更待月',
+        '下限','下限','下限'  ,'下限' ,'下限','下限' ,'下限'  ,'下限' ,'晦'    ,'晦'  ]
+    )
+    .daily(
+      ['夜九つ','夜八つ','暁七つ','明六つ','朝五つ','昼四つ','昼九つ','昼八つ','夕七つ','暮六つ','宵五つ','夜四つ']
+      ['一つ','二つ','三つ','四つ']
+    )
+    .init()
 
 module.exports = FictionalDate
