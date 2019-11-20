@@ -200,14 +200,6 @@ export class FictionalDate
 
     [,year, month, day, week, hour, minute, second] = @dic.start.match reg_parse
     year   = year   - 0
-    if @dic.leaps?
-      [..., full_period] = @dic.leaps
-      period = full_period
-      calc_set.call @, "divs", { period }
-
-      period = Math.floor year / @calc.divs.period
-      year   = year % @calc.divs.period
-
     month  = month  - 0
     day    = day    - 0
     hour   = hour   - 0
@@ -216,7 +208,17 @@ export class FictionalDate
     week   = @dic.weeks.indexOf week
     season = @dic.seasons.indexOf '春分'
     moon   = 0
-    { period, year, month, moon, week, day, hour, minute, second, season }
+
+    if @dic.leaps?
+      [..., full_period] = @dic.leaps
+      period = full_period
+      calc_set.call @, "divs", { period }
+
+      period = Math.floor year / @calc.divs.period
+      year   = year % @calc.divs.period
+      { period, year, month, moon, week, day, hour, minute, second, season }
+    else
+      { year, month, moon, week, day, hour, minute, second, season }
 
   def_zero: ->
     zero_size = (path, idx = 0)=>
@@ -242,13 +244,13 @@ export class FictionalDate
       period = year  + zero_size "period"
 
       season += zero_size "period"
-      { period, week, season, moon }
+      { period, week, season, moon, day }
     else
-      { week, season, moon }
+      { week, season, moon, day }
 
 
   to_tempos: (utc)->
-    period = (base, path, at = utc)=>
+    drill_down = (base, path, at = utc)=>
       table = @get_table base, path
       if table
         o = to_tempo_by table, base.last_at, at
@@ -259,22 +261,40 @@ export class FictionalDate
       o.path = path
       o
 
+    to_tempo_mod = (path, sub, at = utc)=>
+      o = to_tempo_bare @calc.msec[path], @calc.zero[path], at
+      do2 = to_tempo_bare @calc.msec[sub], @calc.zero[sub], o.next_at
+      if do2.last_at <= at
+        do3 = to_tempo_bare @calc.msec[sub], @calc.zero[sub], o.next_at + o.size
+        o.now_idx += 1
+        o.last_at = do2.last_at
+        o.next_at = do3.last_at
+      else
+        do1 = to_tempo_bare @calc.msec[sub], @calc.zero[sub], o.next_at - o.size
+        o.last_at = do1.last_at
+        o.next_at = do2.last_at
+      o
+
+
     # season in year_of_planet
     Zz = to_tempo_bare @calc.msec.year, @calc.zero.season, utc # 太陽年
 
-    z0_p = Zz.last_at + @calc.msec.season * ( 1 )                # 正月中気
+    # 正月中気
+    N0_p = Zz.last_at + @calc.msec.season
+    N0 = to_tempo_mod "moon", "day", N0_p
 
-    N0 = to_tempo_bare @calc.msec.moon, @calc.zero.moon, z0_p # 正月中気の月
-    Nn = period N0, "moon"
+    # 今月と中気
+    Nn = to_tempo_mod "moon", "day", utc
+    Nn.now_idx -= N0.now_idx
+    Nn_p = Zz.last_at + @calc.msec.season * ( 1 + Nn.now_idx * 2 )
 
-    zz_p = Zz.last_at + @calc.msec.season * ( 1 + Nn.now_idx * 2 ) # 今中気
-    zz_q = Zz.last_at + @calc.msec.season * ( 3 + Nn.now_idx * 2 ) # 翌中気
+    # 先月と中気
+    Np = to_tempo_mod "moon", "day", Nn.last_at - 1
+    Np.now_idx -= N0.now_idx
+    Np_p = Zz.last_at + @calc.msec.season * ( 1 + Np.now_idx * 2 )
 
-    Zy = to_tempo_bare @calc.msec.year, @dic.start_at, utc
-
-    unless after_leap_month = Nn.next_at + 0               < zz_p
-      is_leap_month         = Nn.next_at + @calc.msec.moon < zz_q
-    is_previous_year = Zz.last_at 
+    unless after_leap_month = Np.next_at <= Np_p
+      Nn.is_leap = Nn.next_at <= Nn_p
     if after_leap_month
       Nn.now_idx -= 1
     else
@@ -283,36 +303,36 @@ export class FictionalDate
           # 太陽年初に0月が出てしまう。昨年末にする。
           Nn.now_idx = @dic.months.length - 1
           Zz.now_idx -= 1
-        when 12
+        when @dic.months.length
           # 太陽年末に13月が出てしまう。年初にする。
           Nn.now_idx = 0
           Zz.now_idx += 1
 
-    Z  = period Zz, "season" # 太陽年の二十四節気
-    N  = period Nn, 'day'
+    Z  = drill_down Zz, "season" # 太陽年の二十四節気
+    N  = drill_down Nn, 'day'
 
     if @dic.leaps?
       p = to_tempo_bare @calc.msec.period, @calc.zero.period, utc
-      u = period p, "year"
-      M = period u, "month"
-      d = period M, "day"
+      u = drill_down p, "year"
+      M = drill_down u, "month"
+      d = drill_down M, "day"
     else
       u = Zz
       M = Nn
       d = N
 
     #        in year appendix
-    D = period u, "day"
+    D = drill_down u, "day"
 
     # day    in week (曜日)
     w = to_tempo_bare @calc.msec.week, @calc.zero.week,   utc
-    e  = period w,  "day"
+    e = E = drill_down w,  "day"
 
     # hour   in day
-    H = period d, "hour"
+    H = drill_down d, "hour"
     # minute in day
-    m = period H, "minute"
-    s = period m, "second"
+    m = drill_down H, "minute"
+    s = drill_down m, "second"
     now_idx = utc - s.last_at
     S = { now_idx }
 
@@ -333,7 +353,9 @@ export class FictionalDate
       else
         "  "
     }\t #{
-      if is_leap_month
+      Zz.now_idx
+    }年#{
+      if Nn.is_leap
         "閏"
       else
         "  "
@@ -341,8 +363,8 @@ export class FictionalDate
       _.padStart Nn.now_idx + 1, 2,'0'
     }月#{
       _.padStart N.now_idx + 1, 2,'0'
-    }日\t #{ y.now_idx } #{ Zz.now_idx }"
-    { G,u, y,M,d, D,w,e, H,m,s,S, Z,N, graph }
+    }日\t"
+    { G,u, y,M,d, D,w,e,E, H,m,s,S, Z,N, graph }
 
   index: (tgt, str = default_parse_format)->
     tokens = str.match reg_token
@@ -399,7 +421,7 @@ export class FictionalDate
         @dic.hours[ now_idx ]
       when 'm'
         @dic.minutes[ now_idx ]
-      when 'e'
+      when 'e','E'
         @dic.weeks[ now_idx ]
       when 'Z'
         @dic.seasons[ now_idx ]
@@ -485,7 +507,7 @@ export class FictionalDate
 EARTH = [
   [31556925147.0, new Date("2019/03/21 06:58").getTime()]
   [ 2551442889.6, new Date("2019/01/06 10:28").getTime()]
-  [to_msec('1d'), 0]
+  [to_msec('1d'), 0] # LOD ではなく、暦上の1日。Unix epoch では閏秒を消し去るため。
   23.4397
   [ 35, 135 ]
 ]
@@ -542,35 +564,38 @@ FictionalDate.令和 = g.dup()
   )
   .init()
 
-if false
-  FictionalDate.平気法 = new FictionalDate()
-    .planet ...EARTH
-    .calendar(
-      ["", "前"]
-      "1970年1月1日(木)0時0分0秒"
-      0
-      null
-      27
-    )
-    .yeary(
-      ["先勝","友引","先負","仏滅","大安","赤口"]
-      ['睦月','如月','弥生','卯月','皐月','水無月','文月','葉月','長月','神無月','霜月','師走']
-      null
-    )
-    .moony(
-      ['朔'  ,'既朔','三日月','上弦' ,'上弦','上弦' ,'上弦'  ,'上弦' ,'上弦'  ,'上弦' ,
-        '上弦','上弦','十三夜','小望月','満月','十六夜','立待月','居待月','臥待月','更待月',
-        '下限','下限','下限'  ,'下限' ,'下限','下限' ,'下限'  ,'下限' ,'晦'    ,'晦'  ]
-    )
-    .daily(
-      ['夜九つ','夜八つ','暁七つ',
-       '明六つ','朝五つ','昼四つ',
-       '昼九つ','昼八つ','夕七つ',
-       '暮六つ','宵五つ','夜四つ'
-      ]
-      ['一つ','二つ','三つ','四つ']
-    )
-    .init()
+FictionalDate.平気法 = new FictionalDate()
+  .planet ...EARTH
+  .calendar(
+    ["", "前"]
+    "1970年1月1日(木)0時0分0秒"
+    0
+  )
+  .yeary(
+    ["先勝","友引","先負","仏滅","大安","赤口"]
+    ['睦月','如月','弥生','卯月','皐月','水無月','文月','葉月','長月','神無月','霜月','師走']
+  )
+  .seasonly(
+    #   節    中     節    中     節    中 
+    ["立春","雨水","啓蟄","春分","清明","穀雨",
+     "立夏","小満","芒種","夏至","小暑","大暑",
+     "立秋","処暑","白露","秋分","寒露","霜降",
+     "立冬","小雪","大雪","冬至","小寒","大寒"]
+  )
+  .moony(
+    ['朔'  ,'既朔','三日月','上弦' ,'上弦','上弦' ,'上弦'  ,'上弦' ,'上弦'  ,'上弦' ,
+      '上弦','上弦','十三夜','小望月','満月','十六夜','立待月','居待月','臥待月','更待月',
+      '下限','下限','下限'  ,'下限' ,'下限','下限' ,'下限'  ,'下限' ,'晦'    ,'晦'  ]
+  )
+  .daily(
+    ['夜九つ','夜八つ','暁七つ',
+      '明六つ','朝五つ','昼四つ',
+      '昼九つ','昼八つ','夕七つ',
+      '暮六つ','宵五つ','夜四つ'
+    ]
+    ['一つ','二つ','三つ','四つ']
+  )
+  .init()
 
 module.exports = FictionalDate
 

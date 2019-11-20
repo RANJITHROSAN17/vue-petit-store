@@ -1,4 +1,4 @@
-{ Gregorian, 令和, 平成, to_msec, to_tempo_bare } = require "../lib/index.min"
+{ Gregorian, 令和, 平成, 平気法, to_msec, to_tempo_bare } = require "../lib/index.min"
 _ = require 'lodash'
 
 g = Gregorian
@@ -58,22 +58,22 @@ describe "平成", =>
     return
   return
 
-describe "Gregorian", =>
+describe "平気法", =>
   format = require "date-fns/format"
   locale = require "date-fns/locale/ja"
-  test '平気法二十四節季', =>
-    moon_zero   = to_tempo_bare( g.calc.msec.moon,   g.calc.zero.moon,   new Date("2013-1-1") - 0 ).last_at
-    season_zero = to_tempo_bare( g.calc.msec.season, g.calc.zero.season, new Date("2013-1-1") - 0 ).last_at
+  test '二十四節季と月相', =>
+    moon_zero   = to_tempo_bare( 平気法.calc.msec.moon,   平気法.calc.zero.moon,   new Date("2013-1-1") - 0 ).last_at
+    season_zero = to_tempo_bare( 平気法.calc.msec.season, 平気法.calc.zero.season, new Date("2013-1-1") - 0 ).last_at
     list = []
-    for i in [0..200]
-      msec = moon_zero + i * g.calc.msec.moon
+    for i in [0.. to_msec("20y") / 平気法.calc.msec.moon]
+      msec = moon_zero + i * 平気法.calc.msec.moon
       { last_at, next_at } = to_tempo_bare to_msec("1d"), to_msec("15h"), msec
       list.push last_at - 1
       list.push last_at
       list.push next_at - 1
       list.push next_at
-    for i in [0..400]
-      msec = season_zero + i * g.calc.msec.season
+    for i in [0.. to_msec("20y") / 平気法.calc.msec.season]
+      msec = season_zero + i * 平気法.calc.msec.season
       { last_at, next_at } = to_tempo_bare to_msec("1d"), to_msec("15h"), msec
       list.push last_at - 1
       list.push last_at
@@ -83,12 +83,14 @@ describe "Gregorian", =>
 
     dst = []
     for msec in list
-      { graph } = g.to_tempos msec
+      { graph } = 平気法.to_tempos msec
       dst.push "#{graph} #{ format msec, "\t yyyy-MM-dd EE HH:mm", { locale } }"
     expect dst
     .toMatchSnapshot()
     return
   return
+
+describe "Gregorian", =>
 
   test 'format', =>
     format = "GyMd(e)H Z"
