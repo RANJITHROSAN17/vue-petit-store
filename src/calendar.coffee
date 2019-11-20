@@ -13,7 +13,7 @@ _ = require "lodash"
 reg_parse = /(\d+)年(\d+)月(\d+)日\(([^)])\)(\d+)時(\d+)分(\d+)秒/
 reg_token = /[yYQqMLwIdDecihHKkms]o|(\w)\1*|''|'(''|[^'])+('|$)|./g
 default_parse_format  = "yyyyMMdd"
-default_format_format = "GGyyyyMMdd(eee)HHmmss"
+default_format_format = "GyMd(e)Hms"
 
 calc_set = (path, o)->
   for key, val of o
@@ -57,10 +57,9 @@ export class FictionalDate
     new @constructor @
 
   planet: (
-    revolution = g.calc.msec.year,
-    synodic    = g.calc.msec.moon,
-    rotation   = g.calc.msec.day, 
-    ecliptic_zero = g.dic.ecliptic_zero,
+    [ revolution = g.calc.msec.year, ecliptic_zero = g.dic.ecliptic_zero]
+    [ synodic    = g.calc.msec.moon, synodic_zero  = g.dic.synodic_zero ]
+    [ rotation   = g.calc.msec.day,  rotation_zero = g.dic.rotation_zero] 
     axtial_tilt   = g.dic.axtial_tilt,
     geo = g.dic.geo
   )->
@@ -75,7 +74,7 @@ export class FictionalDate
     [lat, lng] = geo
     tz_offset = rotation / 360 * lng
 
-    Object.assign @dic, { geo, lat, lng, axtial_tilt, ecliptic_zero, tz_offset }
+    Object.assign @dic, { geo, lat, lng, axtial_tilt, ecliptic_zero, synodic_zero, rotation_zero, tz_offset }
     @
 
   yeary: ( weeks = g.dic.weeks, months = g.dic.months, month_ranges )->
@@ -112,8 +111,8 @@ export class FictionalDate
     Object.assign @dic, { hours, minutes }
     @
 
-  calendar: (era = g.dic.era, start = g.dic.start, start_at = g.dic.start_at, leaps = g.dic.leaps, moon_idx = g.dic.moon_idx)->
-    Object.assign @dic, { era, leaps, start, start_at, moon_idx }
+  calendar: (era = g.dic.era, start = g.dic.start, start_at = g.dic.start_at, leaps = g.dic.leaps)->
+    Object.assign @dic, { era, leaps, start, start_at }
     @
 
   init: ->
@@ -196,26 +195,27 @@ export class FictionalDate
         @def_table_by_season()
 
   def_idx: ->
-    [..., full_period] = @dic.leaps
+    week = @dic.weeks.length
+    calc_set.call @, "divs", { week }
 
-    period = full_period
-    week   = @dic.weeks.length
-    calc_set.call @, "divs", { period, week }
-
-    console.warn [,year, month, day, week, hour, minute, second] = @dic.start.match reg_parse
-
+    [,year, month, day, week, hour, minute, second] = @dic.start.match reg_parse
     year   = year   - 0
-    period = Math.floor year / @calc.divs.period
-    year   = year % @calc.divs.period
+    if @dic.leaps?
+      [..., full_period] = @dic.leaps
+      period = full_period
+      calc_set.call @, "divs", { period }
+
+      period = Math.floor year / @calc.divs.period
+      year   = year % @calc.divs.period
 
     month  = month  - 0
     day    = day    - 0
     hour   = hour   - 0
     minute = minute - 0
     second = second - 0
-    moon   = @dic.moon_idx
     week   = @dic.weeks.indexOf week
     season = @dic.seasons.indexOf '春分'
+    moon   = 0
     { period, year, month, moon, week, day, hour, minute, second, season }
 
   def_zero: ->
@@ -226,61 +226,87 @@ export class FictionalDate
     minute = second + zero_size "minute"
     hour   = minute + zero_size "hour"
     day    = hour   + zero_size "day", 1
+    week   = day    + zero_size("week") / @calc.divs.week
+
+    # 単純のため平気法。春分点から立春点を求める。
+    season = @dic.ecliptic_zero - @calc.msec.year * @calc.idx.season / @dic.seasons.length
+    { since } = to_tempo_bare @calc.msec.year, season, @dic.start_at
+    season = since + zero_size "year", -1
+    moon   = @dic.synodic_zero
 
     if @dic.leaps?
       year_size   = @calc.msec.day * @table.range.year[ @calc.idx.year %% @calc.divs.period ]
 
       month  = day   - (@table.msec.month[year_size][ @calc.idx.month - 2 ] || 0)
       year   = month - (@table.msec.year[         @calc.idx.year  - 1 ] || 0)
+      period = year  + zero_size "period"
+
+      season += zero_size "period"
+      { period, week, season, moon }
     else
-      month  = day   + zero_size "month"
-      year   = month + zero_size "year"
+      { week, season, moon }
 
-    period = year  + zero_size "period"
-
-    week   = day   + zero_size("week") / @calc.divs.week
-
-    # 単純のため平気法。春分点から立春点を求める。
-    season_zero = zero - @calc.msec.year * @calc.idx.season / @dic.seasons.length
-    { since } = o = to_tempo_bare @calc.msec.year, year, @dic.ecliptic_zero + season_zero
-    season = since
-    moon   = zero + zero_size "moon"
-    { period, week, season, moon }
 
   to_tempos: (utc)->
-    period = (base, path)=>
+    period = (base, path, at = utc)=>
       table = @get_table base, path
       if table
-        o = to_tempo_by table, base.last_at, utc
+        o = to_tempo_by table, base.last_at, at
       else
         b_size = @calc.msec[path]
-        o = to_tempo_bare b_size, base.last_at, utc
+        o = to_tempo_bare b_size, base.last_at, at
         o.length = base.size / o.size
       o.path = path
       o
 
-    # period in epoch
-    p  = to_tempo_bare @calc.msec.period, @calc.zero.period, utc
-    w  = to_tempo_bare @calc.msec.week,   @calc.zero.week,   utc
-    n  = to_tempo_bare @calc.msec.moon,   @calc.zero.moon,   utc
-    Zz = to_tempo_bare @calc.msec.year,   @calc.zero.season, utc 
+    # season in year_of_planet
+    Zz = to_tempo_bare @calc.msec.year, @calc.zero.season, utc # 太陽年
 
-    # year   in period
-    y = period p, "year"
-    # month  in year
-    M = period y, "month"
-    # day    in month
-    d = period M, "day"
+    z0_p = Zz.last_at + @calc.msec.season * ( 1 )                # 正月中気
+
+    N0 = to_tempo_bare @calc.msec.moon, @calc.zero.moon, z0_p # 正月中気の月
+    Nn = period N0, "moon"
+
+    zz_p = Zz.last_at + @calc.msec.season * ( 1 + Nn.now_idx * 2 ) # 今中気
+    zz_q = Zz.last_at + @calc.msec.season * ( 3 + Nn.now_idx * 2 ) # 翌中気
+
+    Zy = to_tempo_bare @calc.msec.year, @dic.start_at, utc
+
+    unless after_leap_month = Nn.next_at + 0               < zz_p
+      is_leap_month         = Nn.next_at + @calc.msec.moon < zz_q
+    is_previous_year = Zz.last_at 
+    if after_leap_month
+      Nn.now_idx -= 1
+    else
+      switch Nn.now_idx
+        when -1
+          # 太陽年初に0月が出てしまう。昨年末にする。
+          Nn.now_idx = @dic.months.length - 1
+          Zz.now_idx -= 1
+        when 12
+          # 太陽年末に13月が出てしまう。年初にする。
+          Nn.now_idx = 0
+          Zz.now_idx += 1
+
+    Z  = period Zz, "season" # 太陽年の二十四節気
+    N  = period Nn, 'day'
+
+    if @dic.leaps?
+      p = to_tempo_bare @calc.msec.period, @calc.zero.period, utc
+      u = period p, "year"
+      M = period u, "month"
+      d = period M, "day"
+    else
+      u = Zz
+      M = Nn
+      d = N
 
     #        in year appendix
-    D = period y, "day"
-
-    # season in year_of_planet
-    Z = period Zz, "season"
-    console.warn [Z.now_idx / 2, M.now_idx]
+    D = period u, "day"
 
     # day    in week (曜日)
-    e = period w, "day"
+    w = to_tempo_bare @calc.msec.week, @calc.zero.week,   utc
+    e  = period w,  "day"
 
     # hour   in day
     H = period d, "hour"
@@ -289,30 +315,34 @@ export class FictionalDate
     s = period m, "second"
     now_idx = utc - s.last_at
     S = { now_idx }
-    { p, y,M,d, D,w,e, H,m,s,S, Z }
 
-  to_labels: ({ p, y,M,d, D,w,e, H,m,s,S, Z })->
-    y.label = y.now_idx + p.now_idx * @calc.divs.period
-    y.label =
-      if 0 < y.label
-        G = { now_idx: 0 }
-        y.label + "年"
+    now_idx = u.now_idx = u.now_idx + p.now_idx * @calc.divs.period
+    if 0 < u.now_idx
+      G = { now_idx: 0 }
+    else
+      G = { now_idx: 1 }
+      now_idx = 1 - now_idx
+    y = Object.assign {}, u
+    y.now_idx = now_idx
+
+    graph = "#{
+      @dic.seasons[Z.now_idx]
+    } #{
+      if Z.now_idx % 2
+        _.padStart ( Z.now_idx + 1 )/ 2, 2,'0'
       else
-        G = { now_idx: 1 }
-        1 - y.label + "年"
-    G.label = @dic.era[ G.now_idx ]
-
-    M.label = @dic.months[ M.now_idx ]
-    d.label = d.now_idx + 1 + "日"
-    H.label = @dic.hours[ H.now_idx ]
-    m.label = @dic.minutes[ m.now_idx ]
-    s.label = s.now_idx + "秒"
-    S.label = ("" + (S.now_idx / @calc.msec.second))[2..]
-
-    e.label = @dic.weeks[ e.now_idx ]
-    Z.label = @dic.seasons[ Z.now_idx ]
-
-    { G, p, y,M,d, D,w,e, H,m,s,S, Z }
+        "  "
+    }\t #{
+      if is_leap_month
+        "閏"
+      else
+        "  "
+    }#{
+      _.padStart Nn.now_idx + 1, 2,'0'
+    }月#{
+      _.padStart N.now_idx + 1, 2,'0'
+    }日\t #{ y.now_idx } #{ Zz.now_idx }"
+    { G,u, y,M,d, D,w,e, H,m,s,S, Z,N, graph }
 
   index: (tgt, str = default_parse_format)->
     tokens = str.match reg_token
@@ -342,8 +372,8 @@ export class FictionalDate
     y = "((?:\\d+)年)"
     M = join @dic.months
     d = "((?:\\d+)日)"
-    H = @dic.hours
-    m = @dic.minutes
+    H = join @dic.hours
+    m = join @dic.minutes
     s = "((?:\\d+)秒)"
     S = "((?:\\d+))"
     { G, y,M,d, H,m,s,S }
@@ -358,6 +388,34 @@ export class FictionalDate
     s = (s)=> s[..-2] - 0
     S = (s)=> s[..-2] - 0
     { G, y,M,d, H,m,s,S }
+
+  to_label: (now_idx, token, length )->
+    switch token
+      when 'G'
+        @dic.era[ now_idx ]
+      when 'M'
+        @dic.months[ now_idx ]
+      when 'H'
+        @dic.hours[ now_idx ]
+      when 'm'
+        @dic.minutes[ now_idx ]
+      when 'e'
+        @dic.weeks[ now_idx ]
+      when 'Z'
+        @dic.seasons[ now_idx ]
+      when 'N'
+        @dic.moons[ now_idx ]
+
+      when 'y', 'u'
+        "#{ _.padStart now_idx, length, '0' }年"
+
+      when 'd'
+        "#{ _.padStart now_idx + 1, length, '0' }日"
+      when 's'
+        "#{ _.padStart now_idx, length, '0' }秒"
+
+      when 'S'
+        "#{ now_idx / @calc.msec.second }"[2..]
 
   tempo_list: (tempos, token)->
     switch token[0]
@@ -379,7 +437,7 @@ export class FictionalDate
 
     if length
       base = last_at - size * now_idx
-      for now_idx in [0..length]
+      for now_idx in [0...length]
         last_at = (now_idx + 0) * size + gap
         next_at = (now_idx + 1) * size + gap
         list.push { now_idx, size, last_at, next_at, last_time: new Date(last_at), next_time: new Date(next_at) }
@@ -412,11 +470,11 @@ export class FictionalDate
     ( S )
 
   format: (utc, str = default_format_format)->
-    o = @to_labels @to_tempos utc
+    o = @to_tempos utc
     str.match reg_token
-    .map (token)->
+    .map (token)=>
       if val = o[token[0]]
-        val.label
+        @to_label val.now_idx, token[0], token.length
       else
         token
     .join("")
@@ -425,10 +483,9 @@ export class FictionalDate
 # 閏日処理法、閏週処理法、閏月処理法、あたりを変数に
 
 EARTH = [
-  to_msec('1y')
-  2551442889.6
-  to_msec('1d')
-  new Date("2019/03/21 6:58").getTime()
+  [31556925147.0, new Date("2019/03/21 06:58").getTime()]
+  [ 2551442889.6, new Date("2019/01/06 10:28").getTime()]
+  [to_msec('1d'), 0]
   23.4397
   [ 35, 135 ]
 ]
@@ -440,7 +497,6 @@ FictionalDate.Gregorian = g = new FictionalDate()
     "1970年1月1日(木)0時0分0秒"
     0
     [4, 100, 400]
-    27
   )
   .yeary(
     ['日','月','火','水','木','金','土']
@@ -448,11 +504,16 @@ FictionalDate.Gregorian = g = new FictionalDate()
     [31, 0,31,30,31,30,31,31,30,31,30,31]
   )
   .seasonly(
-    #  中     節    中     節    中     節
+    #   節    中     節    中     節    中 
     ["立春","雨水","啓蟄","春分","清明","穀雨",
      "立夏","小満","芒種","夏至","小暑","大暑",
      "立秋","処暑","白露","秋分","寒露","霜降",
      "立冬","小雪","大雪","冬至","小寒","大寒"]
+  )
+  .moony(
+    ['朔'  ,'既朔','三日月','上弦' ,'上弦','上弦' ,'上弦'  ,'上弦' ,'上弦'  ,'上弦' ,
+      '上弦','上弦','十三夜','小望月','満月','十六夜','立待月','居待月','臥待月','更待月',
+      '下限','下限','下限'  ,'下限' ,'下限','下限' ,'下限'  ,'下限' ,'晦'    ,'晦'  ]
   )
   .daily(
     [0...24].map (i)-> "#{i}時"

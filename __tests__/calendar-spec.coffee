@@ -1,4 +1,5 @@
-{ Gregorian, 令和, 平成, to_msec } = require "../lib/index.min"
+{ Gregorian, 令和, 平成, to_msec, to_tempo_bare } = require "../lib/index.min"
+_ = require 'lodash'
 
 g = Gregorian
 
@@ -21,7 +22,7 @@ describe "define", =>
 
 describe "令和", =>
   test 'format', =>
-    format = "GGyyyyMMdd(eee)HH ZZ"
+    format = "GyMd(e)H Z"
     expect [
       令和.format 100000000000000, format
       令和.format 10000000000000, format
@@ -39,7 +40,7 @@ describe "令和", =>
 
 describe "平成", =>
   test 'format', =>
-    format = "GGyyyyMMdd(eee)HH ZZ"
+    format = "GyMd(e)H Z"
     expect [
       平成.format 100000000000000, format
       平成.format 10000000000000, format
@@ -57,61 +58,40 @@ describe "平成", =>
     return
   return
 
-
 describe "Gregorian", =>
-  test '2019年', =>
-    # https://eco.mtk.nao.ac.jp/cgi-bin/koyomi/cande/phenomena_s.cgi
-    format = "GGyyyyMMdd(eee) HHmm ZZ"
+  format = require "date-fns/format"
+  locale = require "date-fns/locale/ja"
+  test '平気法二十四節季', =>
+    moon_zero   = to_tempo_bare( g.calc.msec.moon,   g.calc.zero.moon,   new Date("2013-1-1") - 0 ).last_at
+    season_zero = to_tempo_bare( g.calc.msec.season, g.calc.zero.season, new Date("2013-1-1") - 0 ).last_at
+    list = []
+    for i in [0..200]
+      msec = moon_zero + i * g.calc.msec.moon
+      { last_at, next_at } = to_tempo_bare to_msec("1d"), to_msec("15h"), msec
+      list.push last_at - 1
+      list.push last_at
+      list.push next_at - 1
+      list.push next_at
+    for i in [0..400]
+      msec = season_zero + i * g.calc.msec.season
+      { last_at, next_at } = to_tempo_bare to_msec("1d"), to_msec("15h"), msec
+      list.push last_at - 1
+      list.push last_at
+      list.push next_at - 1
+      list.push next_at
+    list = _.uniq list.sort()
 
-    expect [
-      g.format new Date("2019/02/19 08:04"), format
-      g.format new Date("2019/03/06 11:06"), format
-      g.format new Date("2019/03/21 06:58"), format
-      g.format new Date("2019/04/05 10:51"), format
-      g.format new Date("2019/04/21 02:49"), format
-      g.format new Date("2019/05/06 08:04"), format
-      g.format new Date("2019/05/21 16:59"), format
-      g.format new Date("2019/06/06 08:06"), format
-      g.format new Date("2019/06/22 00:54"), format
-      g.format new Date("2019/07/07 18:21"), format
-      g.format new Date("2019/07/23 11:50"), format
-      g.format new Date("2019/08/08 04:13"), format
-      g.format new Date("2019/08/23 19:02"), format
-      g.format new Date("2019/09/08 07:17"), format
-      g.format new Date("2019/09/23 16:50"), format
-      g.format new Date("2019/10/08 23:06"), format
-      g.format new Date("2019/10/24 02:20"), format
-      g.format new Date("2019/11/08 02:24"), format
-      g.format new Date("2019/11/22 23:59"), format
-      g.format new Date("2019/12/07 19:18"), format
-      g.format new Date("2019/12/22 13:19"), format
-    ].join("\n")
-    .toEqual [
-      "西暦2019年2月19日(火) 8時4分 雨水"
-      "西暦2019年3月6日(水) 11時6分 啓蟄" # "西暦2019年3月6日(水) 6時10分 啓蟄"
-      "西暦2019年3月21日(木) 6時58分 啓蟄"
-      "西暦2019年4月5日(金) 10時51分 春分"
-      "西暦2019年4月21日(日) 2時49分 穀雨" # "西暦2019年4月20日(土) 17時55分 穀雨"
-      "西暦2019年5月6日(月) 8時4分 立夏" # "西暦2019年5月6日(月) 4時3分 立夏"
-      "西暦2019年5月21日(火) 16時59分 小満"
-      "西暦2019年6月6日(木) 8時6分 芒種"
-      "西暦2019年6月22日(土) 0時54分 夏至"
-      "西暦2019年7月7日(日) 18時21分 小暑"
-      "西暦2019年7月23日(火) 11時50分 大暑"
-      "西暦2019年8月8日(木) 4時13分 立秋"
-      "西暦2019年8月23日(金) 19時2分 処暑"
-      "西暦2019年9月8日(日) 7時17分 白露"
-      "西暦2019年9月23日(月) 16時50分 秋分"
-      "西暦2019年10月8日(火) 23時6分 寒露"
-      "西暦2019年10月24日(木) 2時20分 霜降"
-      "西暦2019年11月8日(金) 2時24分 立冬"
-      "西暦2019年11月22日(金) 23時59分 小雪"
-      "西暦2019年12月7日(土) 19時18分 大雪"
-      "西暦2019年12月22日(日) 13時19分 冬至"
-    ].join("\n")
+    dst = []
+    for msec in list
+      { graph } = g.to_tempos msec
+      dst.push "#{graph} #{ format msec, "\t yyyy-MM-dd EE HH:mm", { locale } }"
+    expect dst
+    .toMatchSnapshot()
+    return
+  return
 
   test 'format', =>
-    format = "GGyyyyMMdd(eee)HH ZZ"
+    format = "GyMd(e)H Z"
     expect [
       g.format 100000000000000, format
       g.format 10000000000000, format
@@ -151,24 +131,5 @@ describe "Gregorian", =>
     ].join("\n")
     return
 
-
-  test 'ranges', =>
-    at = g.parse("2020年2月1日")
-    expect g.ranges at, 'M'
-    .toMatchSnapshot()
-    expect g.ranges at, 'd'
-    .toMatchSnapshot()
-    expect g.ranges at, 'Z'
-    .toMatchSnapshot()
-    expect g.ranges at, 'e'
-    .toMatchSnapshot()
-    expect g.ranges at, 'H'
-    .toMatchSnapshot()
-    expect g.ranges at, 'm'
-    .toMatchSnapshot()
-    expect g.ranges at, 's'
-    .toMatchSnapshot()
-    return
-  return
 
 
