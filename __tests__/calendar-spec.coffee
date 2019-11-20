@@ -7,13 +7,7 @@ describe "define", =>
   test 'data', =>
     expect g.calc
     .toMatchSnapshot()
-    expect g.dic
-    .toMatchSnapshot()
     expect g.calc.msec.period
-    .toEqual 12622780800000
-    expect g.calc.msec_max.period
-    .toEqual 12622780800000
-    expect g.calc.msec_min.period
     .toEqual 12622780800000
     expect g.table.msec.year[-1..]
     .toEqual [12622780800000]
@@ -84,14 +78,13 @@ describe "平気法", =>
     dst = []
     for msec in list
       { graph } = 平気法.to_tempos msec
-      dst.push "#{graph} #{ format msec, "\t yyyy-MM-dd EE HH:mm", { locale } }"
+      dst.push "#{graph} #{ 平気法.format msec, "\t yMd E Hm", { locale } } #{ format msec, "\t yyyy-MM-dd EE HH:mm", { locale } }"
     expect dst
     .toMatchSnapshot()
     return
   return
 
 describe "Gregorian", =>
-
   test 'format', =>
     format = "GyMd(e)H Z"
     expect [

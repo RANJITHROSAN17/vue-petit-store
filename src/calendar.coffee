@@ -21,19 +21,17 @@ calc_set = (path, o)->
 
 sub_define = (msec, size)->
   range = [size]
-  msec_min = msec_max = msec = msec / size
-  { range, msec, msec_min, msec_max }
+  msec = msec / size
+  { range, msec }
 
 daily_define = (msec, day)->
   range = [Math.floor(msec / day)]
-  msec = msec_min = msec_max = range[0] * day
-  { range, msec, msec_min, msec_max }
+  msec = range[0] * day
+  { range, msec }
 
 daily_measure = (msec, day)->
   range = [Math.floor(msec / day), Math.ceil(msec / day)]
-  msec_min = range[0] * day
-  msec_max = range[1] * day
-  { range, msec, msec_min, msec_max }
+  { range, msec }
 
 export class FictionalDate
   constructor: (o)->
@@ -50,8 +48,6 @@ export class FictionalDate
         zero: {}
         msec: {}
         range: {}
-        msec_min: {}
-        msec_max: {}
 
   dup: ->
     new @constructor @
@@ -68,8 +64,6 @@ export class FictionalDate
     day    = daily_define    rotation, rotation
     calc_set.call @, "range",    { year, moon, day }
     calc_set.call @, "msec",     { year, moon, day }
-    calc_set.call @, "msec_min", { year, moon, day }
-    calc_set.call @, "msec_max", { year, moon, day }
 
     [lat, lng] = geo
     tz_offset = rotation / 360 * lng
@@ -82,8 +76,6 @@ export class FictionalDate
     week  = daily_define  weeks.length * @calc.msec.day,   @calc.msec.day
     calc_set.call @, "range",    { month, week }
     calc_set.call @, "msec",     { month, week }
-    calc_set.call @, "msec_min", { month, week }
-    calc_set.call @, "msec_max", { month, week }
     Object.assign @dic, { weeks, months, month_ranges }
     @
 
@@ -95,8 +87,6 @@ export class FictionalDate
     season = sub_define @calc.msec.year, seasons.length
     calc_set.call @, "range",    { season }
     calc_set.call @, "msec",     { season }
-    calc_set.call @, "msec_min", { season }
-    calc_set.call @, "msec_max", { season }
     Object.assign @dic, { seasons }
     @
 
@@ -106,8 +96,6 @@ export class FictionalDate
     second = sub_define    minute.msec,  minute.msec / 1000
     calc_set.call @, "range",    { hour, minute, second }
     calc_set.call @, "msec",     { hour, minute, second }
-    calc_set.call @, "msec_min", { hour, minute, second }
-    calc_set.call @, "msec_max", { hour, minute, second }
     Object.assign @dic, { hours, minutes }
     @
 
@@ -161,8 +149,6 @@ export class FictionalDate
     period = year[year.length - 1]
     period = daily_define period, day
     calc_set.call @, "msec",     { period }
-    calc_set.call @, "msec_min", { period }
-    calc_set.call @, "msec_max", { period }
 
     month = {}
     for size in years
@@ -222,8 +208,8 @@ export class FictionalDate
 
   def_zero: ->
     zero_size = (path, idx = 0)=>
-      0 - (@calc.idx[path] - idx) * @calc.msec[path]
-    zero   = 0 - @dic.tz_offset - @dic.start_at
+      @dic.start_at - (@calc.idx[path] - idx) * @calc.msec[path]
+    zero   = @dic.start_at - @dic.start_at - @dic.tz_offset
     second = zero   + zero_size "second"
     minute = second + zero_size "minute"
     hour   = minute + zero_size "hour"
@@ -231,13 +217,14 @@ export class FictionalDate
     week   = day    + zero_size("week") / @calc.divs.week
 
     # 単純のため平気法。春分点から立春点を求める。
-    season = @dic.ecliptic_zero - @calc.msec.year * @calc.idx.season / @dic.seasons.length
-    { since } = to_tempo_bare @calc.msec.year, season, @dic.start_at
+    # season = 0 - @dic.ecliptic_zero + zero_size "season", 13.5
+    season = @dic.ecliptic_zero + zero_size "season"
+    { since } = to_tempo_bare @calc.msec.year, -season, @dic.start_at
     season = since + zero_size "year", -1
-    moon   = @dic.synodic_zero
+    moon   = 0 - @dic.synodic_zero
 
     if @dic.leaps?
-      year_size   = @calc.msec.day * @table.range.year[ @calc.idx.year %% @calc.divs.period ]
+      year_size = @calc.msec.day * @table.range.year[ @calc.idx.year %% @calc.divs.period ]
 
       month  = day   - (@table.msec.month[year_size][ @calc.idx.month - 2 ] || 0)
       year   = month - (@table.msec.year[         @calc.idx.year  - 1 ] || 0)
@@ -311,22 +298,26 @@ export class FictionalDate
     Z  = drill_down Zz, "season" # 太陽年の二十四節気
     N  = drill_down Nn, 'day'
 
+    # day    in week (曜日)
+    w = to_tempo_bare @calc.msec.week, @calc.zero.week,   utc
+    e = E = drill_down w,  "day"
+
     if @dic.leaps?
       p = to_tempo_bare @calc.msec.period, @calc.zero.period, utc
       u = drill_down p, "year"
+      u.now_idx = u.now_idx + p.now_idx * @calc.divs.period
+
       M = drill_down u, "month"
       d = drill_down M, "day"
     else
       u = Zz
       M = Nn
       d = N
+      # 旧暦では、週は月初にリセットする。
+      e.now_idx = ( M.now_idx + d.now_idx ) % @dic.weeks.length
 
     #        in year appendix
     D = drill_down u, "day"
-
-    # day    in week (曜日)
-    w = to_tempo_bare @calc.msec.week, @calc.zero.week,   utc
-    e = E = drill_down w,  "day"
 
     # hour   in day
     H = drill_down d, "hour"
@@ -336,14 +327,12 @@ export class FictionalDate
     now_idx = utc - s.last_at
     S = { now_idx }
 
-    now_idx = u.now_idx = u.now_idx + p.now_idx * @calc.divs.period
+    y = Object.assign {}, u
     if 0 < u.now_idx
       G = { now_idx: 0 }
     else
       G = { now_idx: 1 }
-      now_idx = 1 - now_idx
-    y = Object.assign {}, u
-    y.now_idx = now_idx
+      y.now_idx = 1 - u.now_idx
 
     graph = "#{
       @dic.seasons[Z.now_idx]
@@ -353,7 +342,7 @@ export class FictionalDate
       else
         "  "
     }\t #{
-      Zz.now_idx
+      y.now_idx
     }年#{
       if Nn.is_leap
         "閏"
@@ -411,12 +400,17 @@ export class FictionalDate
     S = (s)=> s[..-2] - 0
     { G, y,M,d, H,m,s,S }
 
-  to_label: (now_idx, token, length )->
+  to_label: ({ now_idx, is_leap }, token, length )->
     switch token
       when 'G'
         @dic.era[ now_idx ]
       when 'M'
-        @dic.months[ now_idx ]
+        "#{
+          if is_leap
+            "閏"
+          else
+            ""
+        }#{ @dic.months[ now_idx ] }"
       when 'H'
         @dic.hours[ now_idx ]
       when 'm'
@@ -496,7 +490,7 @@ export class FictionalDate
     str.match reg_token
     .map (token)=>
       if val = o[token[0]]
-        @to_label val.now_idx, token[0], token.length
+        @to_label val, token[0], token.length
       else
         token
     .join("")
@@ -570,6 +564,7 @@ FictionalDate.平気法 = new FictionalDate()
     ["", "前"]
     "1970年1月1日(木)0時0分0秒"
     0
+    null
   )
   .yeary(
     ["先勝","友引","先負","仏滅","大安","赤口"]
