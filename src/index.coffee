@@ -1,8 +1,8 @@
 module.exports = {
+  FancyDate: require "./fancy-date"
   ...require "./struct"
   ...require "./time"
   ...require "./timer"
-  ...require "./calendar"
   ...require "./uri"
   ...require "./curtain"
   ...require "./observer"

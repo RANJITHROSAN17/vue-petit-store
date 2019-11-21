@@ -1,4 +1,5 @@
-{ Gregorian, 令和, 平成, 平気法, to_msec, to_tempo_bare } = require "../lib/index.min"
+{ FancyDate, to_msec, to_tempo_bare } = require "../lib/index.min"
+{ Gregorian, 令和, 平成, 平気法 } = FancyDate
 _ = require 'lodash'
 
 g = Gregorian
