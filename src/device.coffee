@@ -79,6 +79,8 @@ accel_with_gravity = xyz_new()
 gyro = abg_new()
 rotate = abg_new()
 
+gamepads = []
+
 geo =
   label: ""
   latitude:  0
@@ -105,6 +107,7 @@ scroll =
   is_oblong:    false
   is_horizontal: true
   is_vertical:  false
+
 
 deviceorientation =
   count: 0
@@ -215,6 +218,39 @@ scroll_poll =
 
       beforeDestroy: =>
 
+gamepad_poll =
+  count: 0
+  conn: ({ gamepad: { timestamp, connected, buttons, axes } })->
+    { index, timestamp, connected, buttons, axes } = gamepad
+    gamepads[index] = gamepad
+    if connected
+      # join
+    else
+      # bye
+  call: ->
+    unless window.ongamepadconnected
+      for gamepad in navigator.getGamepads()
+        { index } = gamepad
+        gamepads[index] = gamepad
+      
+    requestAnimationFrame gamepad_poll.call
+
+  with: (o)->
+    Object.assign o,
+      mounted: =>
+        return unless window?
+        return if @count++
+        @call()
+        if window.ongamepadconnected
+          window.addEventListener "gamepadconnected", @conn
+          window.addEventListener "gamepaddisconnected", @conn
+
+      beforeDestroy: =>
+        return if --@count
+        if window.ongamepadconnected
+          window.removeEventListener "gamepadconnected", @conn
+          window.removeEventListener "gamepaddisconnected", @conn
+
 
 module.exports = m =
   margin: 0.4
@@ -222,6 +258,11 @@ module.exports = m =
   device: ({ margin, keep })->
     m.margin = margin
     m.keep   = keep
+
+  gamepad: ->
+    gamepad_poll.with
+      data: ->
+        { gamepads }
 
   geo: ->
     geolocation.with
