@@ -55,30 +55,40 @@ describe "平成", =>
 describe "平気法", =>
   format = require "date-fns/format"
   locale = require "date-fns/locale/ja"
-  test '二十四節季と月相', =>
-    moon_zero   = to_tempo_bare( 平気法.calc.msec.moon,   平気法.calc.zero.moon,   new Date("2013-1-1") - 0 ).last_at
-    season_zero = to_tempo_bare( 平気法.calc.msec.season, 平気法.calc.zero.season, new Date("2013-1-1") - 0 ).last_at
-    list = []
-    for i in [0.. to_msec("20y") / 平気法.calc.msec.moon]
-      msec = moon_zero + i * 平気法.calc.msec.moon
-      { last_at, next_at } = to_tempo_bare to_msec("1d"), to_msec("15h"), msec
-      list.push last_at - 1
-      list.push last_at
-      list.push next_at - 1
-      list.push next_at
-    for i in [0.. to_msec("20y") / 平気法.calc.msec.season]
-      msec = season_zero + i * 平気法.calc.msec.season
-      { last_at, next_at } = to_tempo_bare to_msec("1d"), to_msec("15h"), msec
-      list.push last_at - 1
-      list.push last_at
-      list.push next_at - 1
-      list.push next_at
-    list = _.uniq list.sort()
 
+  moon_zero   = to_tempo_bare( 平気法.calc.msec.moon,   平気法.calc.zero.moon,   new Date("2013-1-1") - 0 ).last_at
+  season_zero = to_tempo_bare( 平気法.calc.msec.season, 平気法.calc.zero.season, new Date("2013-1-1") - 0 ).last_at
+  list = []
+  for i in [0.. to_msec("20y") / 平気法.calc.msec.moon]
+    msec = moon_zero + i * 平気法.calc.msec.moon
+    { last_at, next_at } = to_tempo_bare to_msec("1d"), to_msec("15h"), msec
+    list.push last_at - 1
+    list.push last_at
+    list.push next_at - 1
+    list.push next_at
+  for i in [0.. to_msec("20y") / 平気法.calc.msec.season]
+    msec = season_zero + i * 平気法.calc.msec.season
+    { last_at, next_at } = to_tempo_bare to_msec("1d"), to_msec("15h"), msec
+    list.push last_at - 1
+    list.push last_at
+    list.push next_at - 1
+    list.push next_at
+  list = _.uniq list.sort()
+
+  test '太陽の動き', =>
+    dst = []
+    for msec in list
+      { graph } = g.solor msec
+      dst.push "#{ format msec, "\t yyyy-MM-dd EE HH:mm", { locale } } #{ graph }"
+    expect dst
+    .toMatchSnapshot()
+    return
+
+  test '二十四節季と月相', =>
     dst = []
     for msec in list
       { graph } = 平気法.to_tempos msec
-      dst.push "#{graph} #{ 平気法.format msec, "\t yMd E Hm", { locale } } #{ format msec, "\t yyyy-MM-dd EE HH:mm", { locale } }"
+      dst.push "#{graph} #{ 平気法.format msec, "\t yMd E Hm", { locale } } #{ format msec, "\t yyyy-MM-dd EEE HH:mm", { locale } }"
     expect dst
     .toMatchSnapshot()
     return

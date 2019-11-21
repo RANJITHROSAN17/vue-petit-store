@@ -1,4 +1,4 @@
-
+  
 {
   timezone
   by_tempo
@@ -53,7 +53,7 @@ export class FictionalDate
     new @constructor @
 
   planet: (
-    [ revolution = g.calc.msec.year, ecliptic_zero = g.dic.ecliptic_zero]
+    [ revolution = g.calc.msec.year, spring = g.dic.spring]
     [ synodic    = g.calc.msec.moon, synodic_zero  = g.dic.synodic_zero ]
     [ rotation   = g.calc.msec.day,  rotation_zero = g.dic.rotation_zero] 
     axtial_tilt   = g.dic.axtial_tilt,
@@ -68,7 +68,7 @@ export class FictionalDate
     [lat, lng] = geo
     tz_offset = rotation / 360 * lng
 
-    Object.assign @dic, { geo, lat, lng, axtial_tilt, ecliptic_zero, synodic_zero, rotation_zero, tz_offset }
+    Object.assign @dic, { geo, lat, lng, axtial_tilt, spring, synodic_zero, rotation_zero, tz_offset }
     @
 
   yeary: ( weeks = g.dic.weeks, months = g.dic.months, month_ranges )->
@@ -216,10 +216,9 @@ export class FictionalDate
     day    = hour   + zero_size "day", 1
     week   = day    + zero_size("week") / @calc.divs.week
 
-    # 単純のため平気法。春分点から立春点を求める。
-    # season = 0 - @dic.ecliptic_zero + zero_size "season", 13.5
-    season = @dic.ecliptic_zero + zero_size "season"
-    { since } = to_tempo_bare @calc.msec.year, -season, @dic.start_at
+    # 単純のため平気法。
+    season = @dic.spring + zero_size "season" # 立春点
+    { since } = to_tempo_bare @calc.msec.year, @dic.start_at, season
     season = since + zero_size "year", -1
     moon   = 0 - @dic.synodic_zero
 
@@ -235,6 +234,90 @@ export class FictionalDate
     else
       { week, season, moon, day }
 
+###
+http://bakamoto.sakura.ne.jp/buturi/2hinode.pdf
+ベクトルで
+a1 = e1 * cos(lat/360) + e3 * sin(lat/360)
+a2 = e3 * cos(lat/360) - e1 * sin(lat/360)
+T = (赤緯, 時角)->
+  a1 * sin(赤緯) + cos(赤緯) * (a2 * cos(時角) - e2 * sin(時角))
+T = ( lat, 赤緯, 時角 )->
+  e1 * ( cos(lat/360) * sin(赤緯) - sin(lat/360) * cos(赤緯) * cos(時角) ) +
+  e2 * (-cos(赤緯) * sin(時角)) +
+  e3 * ( sin(lat/360) * sin(赤緯) + cos(lat/360) * cos(赤緯) * cos(時角) )
+
+K   = g.dic.axtial_tilt / 360
+高度 = -50/60
+時角 = ( lat, 高度, 赤緯 )->
+  acos(( sin(高度) - sin(lat/360) * sin(赤緯) ) / cos(lat/360) * cos(赤緯) )
+方向角 = ( lat, 高度, 赤緯, 時角 )->
+  acos(( cos(lat/360) * sin(赤緯) - sin(lat/360) * cos(赤緯) * cos(時角) ) / cos(高度) )
+季節 = 春分点からの移動角度
+赤緯 = asin( sin(K) * sin(季節) )
+赤経 = atan( tan(季節) * cos(K) )
+南中時刻 = ->
+  正午 + 時角 + ( 赤経 - 季節 ) + 平均値 + tz_offset
+日の出 = ->
+  南中時刻 - 時角
+日の入 = ->
+  南中時刻 + 時角
+###
+
+  solor: (utc, idx = 2)->
+    days = [
+        6      # golden hour end         / golden hour
+      -18 / 60 # sunrise bottom edge end / sunset bottom edge start
+      -50 / 60 # sunrise top edge start  / sunset top edge end
+       -6      # dawn                    / dusk
+      -12      # nautical dawn           / nautical dusk
+      -18      # night end               / night
+    ]
+    { asin, acos, atan, sin, cos, tan, PI } = Math
+    deg_to_rad  = 2 * PI / 360
+    year_to_rad = 2 * PI / @calc.msec.year
+    rad_to_day  = @calc.msec.day / ( 2 * PI )
+
+    高度 = days[idx]        * deg_to_rad
+    K   = @dic.axtial_tilt * deg_to_rad
+    lat = @dic.lat         * deg_to_rad
+
+    T0  = to_tempo_bare @calc.msec.year, @calc.zero.season, utc
+    day = to_tempo_bare @calc.msec.day, -@dic.tz_offset,    utc
+
+    # 南中差分の計算がテキトウになってしまった。あとで検討。
+    南中差分A = 2   * @calc.msec.day / 360 * sin(( T0.since              ) * year_to_rad     )
+    南中差分B = 2.5 * @calc.msec.day / 360 * sin(( T0.since + 1296000000 ) * year_to_rad * 2 )
+    南中時刻   = ( day.last_at + day.next_at ) / 2 + 南中差分A + 南中差分B
+
+    T1 = to_tempo_bare @calc.msec.year, @dic.spring, 南中時刻
+
+    spring = T1.last_at
+    季節 = T1.since * year_to_rad
+    赤緯 = asin( sin(K) * sin(季節) )
+    赤経 = atan( tan(季節) * cos(K) )
+    時角 = acos(( sin(高度) - sin(lat) * sin(赤緯) ) / cos(lat) * cos(赤緯) )
+
+    方向角 = acos(( cos(lat) * sin(赤緯) - sin(lat) * cos(赤緯) * cos(時角) ) / cos(高度) )
+    日の出 = 南中時刻 - 時角 * rad_to_day
+    日の入 = 南中時刻 + 時角 * rad_to_day
+
+    graph = 
+      "  赤緯.#{
+        Math.floor 赤緯 / deg_to_rad 
+      }  赤経.#{
+        Math.floor 赤経 / deg_to_rad 
+      }  方向角.#{
+        Math.floor 方向角 / deg_to_rad
+      }  時角.#{
+        Math.floor 時角 / deg_to_rad
+      }  日の出.#{
+        @format 日の出, 'Hm'
+      }  南中時刻.#{
+        @format 南中時刻, 'Hm'
+      }  日の入.#{
+        @format 日の入, 'Hm'
+      }"
+    { 時角, 方向角, 南中時刻, 日の出, 日の入, graph }
 
   to_tempos: (utc)->
     drill_down = (base, path, at = utc)=>
@@ -495,13 +578,10 @@ export class FictionalDate
         token
     .join("")
 
-# 暦法利用都市から見て、恒星の南中高度、指で数える最大数、可測惑星数、起算時刻。
-# 閏日処理法、閏週処理法、閏月処理法、あたりを変数に
-
 EARTH = [
   [31556925147.0, new Date("2019/03/21 06:58").getTime()]
   [ 2551442889.6, new Date("2019/01/06 10:28").getTime()]
-  [to_msec('1d'), 0] # LOD ではなく、暦上の1日。Unix epoch では閏秒を消し去るため。
+  [   86400000  , 0] # LOD ではなく、暦上の1日。Unix epoch では閏秒を消し去るため。
   23.4397
   [ 35, 135 ]
 ]
@@ -593,12 +673,3 @@ FictionalDate.平気法 = new FictionalDate()
   .init()
 
 module.exports = FictionalDate
-
-{ PI, atan2, sin, cos, tan } = Math
-rad = PI / 180
-e = rad * 23.4397;
-right_ascension = ( l, b )-> atan2 sin(l) * cos(e) - tan(b) * sin(e),  cos(l)
-declination     = ( l, b )-> asin  sin(b) * cos(e) + cos(b) * sin(e) * sin(l)
-azmith   = ( H, phi, dec )-> atan2 sin(H), cos(H) * sin(phi) - tan(dec) * cos(phi)
-altitude = ( H, phi, dec )-> asin  sin(phi) * sin(dec) + cos(phi) * cos(dec) * cos(H)
-siderealTime    = ( d,lw )-> rad * ( 280.16 + 360.9856235 * d ) - lw
