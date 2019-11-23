@@ -66,23 +66,60 @@ to_tempo_bare = (size, gap, write_at)->
 
   { last_at, write_at, next_at, timeout, now_idx, remain, since, gap, size }
 
+###
 to_tempo_by = (table, gap, write_at)->
-  scan_at = (write_at - gap) % table[-1..][0]
-  last_at = 0
-  for next_at, idx in table
-    unless scan_at < next_at
-      last_at = next_at
-      continue
-    break
+  scan_at = write_at - gap
+  if scan_at < 0
+    now_idx = -1
+    next_at = gap
+    last_at = -Infinity
+  else
+    last_at = 0
+    for next_at, now_idx in table
+      unless scan_at < next_at
+        last_at = next_at
+        continue
+      break
 
-  next_at += gap
-  last_at += gap
+    if last_at == next_at
+      next_at = Infinity
+    next_at += gap
+    last_at += gap
 
   size   =  next_at -  last_at
   remain =  next_at - write_at
   since  = write_at -  last_at
   timeout = remain
-  now_idx = idx
+
+  { last_at, write_at, next_at, timeout, now_idx, remain, since, gap, size, scan_at, table }
+###
+# バイナリサーチ 高速化はするが、微差なので複雑さのせいで逆に遅いかも？
+to_tempo_by = (table, gap, write_at)->
+  scan_at = write_at - gap
+  if scan_at < 0
+    now_idx = -1
+    next_at = gap
+    last_at = -Infinity
+  else
+    top_idx = 0
+    now_idx = table.length
+    while top_idx < now_idx
+      mid_idx = (top_idx + now_idx) >>> 1
+      next_at = table[mid_idx]
+      if next_at <= scan_at
+        top_idx = mid_idx + 1
+      else
+        now_idx = mid_idx
+
+    next_at = table[now_idx] || Infinity
+    last_at = table[now_idx - 1] || 0
+    next_at += gap
+    last_at += gap
+
+  size   =  next_at -  last_at
+  remain =  next_at - write_at
+  since  = write_at -  last_at
+  timeout = remain
 
   { last_at, write_at, next_at, timeout, now_idx, remain, since, gap, size, scan_at, table }
 

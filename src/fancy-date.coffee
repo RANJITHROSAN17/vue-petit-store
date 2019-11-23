@@ -17,7 +17,7 @@ default_format_format = "GyMd(e)Hms"
 
 calc_set = (path, o)->
   for key, val of o
-    @calc[path][key] = val[path] || val
+    @calc[path][key] = val?[path] || val
 
 sub_define = (msec, size)->
   range = [size]
@@ -42,6 +42,7 @@ export class FancyDate
     else
       @dic = {}
       @calc =
+        eras: []
         divs: {}
         idx:  {}
         gap:  {}
@@ -69,6 +70,11 @@ export class FancyDate
     tz_offset = rotation / 360 * lng
 
     Object.assign @dic, { geo, lat, lng, axtial_tilt, spring, synodic_zero, rotation_zero, tz_offset }
+    @
+
+  era: ( era, eras = [] )->
+    eras = _.cloneDeep eras
+    Object.assign @dic, { era, eras }
     @
 
   yeary: ( weeks = g.dic.weeks, months = g.dic.months, month_ranges )->
@@ -99,14 +105,24 @@ export class FancyDate
     Object.assign @dic, { hours, minutes }
     @
 
-  calendar: (era = g.dic.era, start = g.dic.start, start_at = g.dic.start_at, leaps = g.dic.leaps)->
-    Object.assign @dic, { era, leaps, start, start_at }
+  calendar: (start = g.dic.start, start_at = g.dic.start_at, leaps = null)->
+    Object.assign @dic, { leaps, start, start_at }
     @
 
   init: ->
     @def_table()
     calc_set.call @, "idx",  @def_idx()
     calc_set.call @, "zero", @def_zero()
+
+    zero = @calc.zero.era
+    list =
+      for [ title, msec ], idx in @dic.eras
+        { u } = @to_tempos msec
+        a = [ title, msec, u.now_idx]
+        @calc.eras.push a
+        msec - zero
+    list.push Infinity
+    @table.msec.era = list
     @
 
   def_table_by_leap_year: ->
@@ -165,13 +181,8 @@ export class FancyDate
           null
 
   def_table_by_season: ->
-    day = @calc.msec.day
-    upto = (src)->
-      msec = 0
-      for i in src
-        msec += i * day
-
-    ({ last_at, size, now_idx }, path)-> null
+    @table = { range: {}, msec: {} }
+    (o, path)-> null
 
   def_table: ->
     @get_table = 
@@ -216,10 +227,19 @@ export class FancyDate
     day    = hour   + zero_size "day", 1
     week   = day    + zero_size("week") / @calc.divs.week
 
+    # 元号
+    era = @dic.eras[0]?[1] || Infinity
+    @calc.eras = []
+
+    # JD
+    jd = -2440587.5 * @calc.msec.day
+    ld = jd + 2299159.5 * @calc.msec.day
+    mjd = jd + 2400000.5 * @calc.msec.day
+
     # 単純のため平気法。
     season = @dic.spring + zero_size "season" # 立春点
     { since } = to_tempo_bare @calc.msec.year, @dic.start_at, season
-    season = since + zero_size "year", -1
+    season = since + zero_size "year"
     moon   = 0 - @dic.synodic_zero
 
     if @dic.leaps?
@@ -230,9 +250,14 @@ export class FancyDate
       period = year  + zero_size "period"
 
       season += zero_size "period"
-      { period, week, season, moon, day }
+      if period < era
+        era = period + @table.msec.year[0]
+        @calc.eras = [[@dic.era, era, 1]]
     else
-      { week, season, moon, day }
+      if season < era
+        era = season + @calc.msec.year
+        @calc.eras = [[@dic.era, era, 1]]
+    { period, era, week, season, moon, day, jd,ld,mjd }
 
 ###
 http://bakamoto.sakura.ne.jp/buturi/2hinode.pdf
@@ -345,6 +370,7 @@ K   = g.dic.axtial_tilt / 360
         o.next_at = do2.last_at
       o
 
+    J = to_tempo_bare @calc.msec.day, @calc.zero.jd, utc # ユリウス日
 
     # season in year_of_planet
     Zz = to_tempo_bare @calc.msec.year, @calc.zero.season, utc # 太陽年
@@ -410,11 +436,17 @@ K   = g.dic.axtial_tilt / 360
     now_idx = utc - s.last_at
     S = { now_idx }
 
+    G = {}
+    if @table.msec.era?
+      era_base = to_tempo_by @table.msec.era, @calc.zero.era, utc
+      era = @calc.eras[era_base.now_idx]
+      if era?[0]
+        u.now_idx += 1 - era[2]
+        G.label = era[0]
+
     y = Object.assign {}, u
-    if 0 < u.now_idx
-      G = { now_idx: 0 }
-    else
-      G = { now_idx: 1 }
+    if u.now_idx < 1
+      G.label = "紀元前"
       y.now_idx = 1 - u.now_idx
 
     graph = "#{
@@ -436,7 +468,7 @@ K   = g.dic.axtial_tilt / 360
     }月#{
       _.padStart N.now_idx + 1, 2,'0'
     }日\t"
-    { G,u, y,M,d, D,w,e,E, H,m,s,S, Z,N, graph }
+    { G,u, y,M,d, D,w,e,E, H,m,s,S, Z,N, J, era, graph }
 
   index: (tgt, str = default_parse_format)->
     tokens = str.match reg_token
@@ -449,28 +481,30 @@ K   = g.dic.axtial_tilt / 360
         token.replace(/([\\\[\]().*?])/g,"\\$1")
     .join("")
     idx = @parse_idx()
-    p = y = M = d = H = m = s = S = 0
-    data = { p,y,M,d,H,m,s,S }
+    p = y = M = d = H = m = s = S = J = 0
+    data = { p,y,M,d,H,m,s,S, J }
     for s, p in tgt.match(reg)[1..]
       token = tokens[p]
       if val = idx[token[0]]
         data[token[0]] = val s
-    data.p = Math.floor( data.y / @calc.divs.period )
-    data.y = data.y - data.p * @calc.divs.period
+    if @dic.leaps?
+      data.p = Math.floor( data.y / @calc.divs.period )
+      data.y = data.y - data.p * @calc.divs.period
     data
 
   parse_reg: ->
     join = (list)->
       "(#{ list.join("|") })"
-    G = join @dic.era
-    y = "((?:\\d+)年)"
+    G = join [@dic.era, "紀元前"]
+    y = "((?:\\d)+年)"
     M = join @dic.months
-    d = "((?:\\d+)日)"
+    d = "((?:\\d)+日)"
     H = join @dic.hours
     m = join @dic.minutes
-    s = "((?:\\d+)秒)"
-    S = "((?:\\d+))"
-    { G, y,M,d, H,m,s,S }
+    s = "((?:\\d)+秒)"
+    S = "(\\d+)"
+    J = "([\\d.]+)"
+    { G, y,M,d, H,m,s,S, J }
 
   parse_idx: ->
     G = (s)=> @dic.era.indexOf(s)
@@ -481,40 +515,44 @@ K   = g.dic.axtial_tilt / 360
     m = (s)=> @dic.minutes.indexOf(s)
     s = (s)=> s[..-2] - 0
     S = (s)=> s[..-2] - 0
-    { G, y,M,d, H,m,s,S }
+    J = (s)=> s - 0
+    { G, y,M,d, H,m,s,S, J }
 
-  to_label: ({ now_idx, is_leap }, token, length )->
+  to_label: (o, token, length )->
     switch token
       when 'G'
-        @dic.era[ now_idx ]
+        o.label
       when 'M'
         "#{
-          if is_leap
+          if o.is_leap
             "閏"
           else
             ""
-        }#{ @dic.months[ now_idx ] }"
+        }#{ @dic.months[ o.now_idx ] }"
       when 'H'
-        @dic.hours[ now_idx ]
+        @dic.hours[ o.now_idx ]
       when 'm'
-        @dic.minutes[ now_idx ]
+        @dic.minutes[ o.now_idx ]
       when 'e','E'
-        @dic.weeks[ now_idx ]
+        @dic.weeks[ o.now_idx ]
       when 'Z'
-        @dic.seasons[ now_idx ]
+        @dic.seasons[ o.now_idx ]
       when 'N'
-        @dic.moons[ now_idx ]
+        @dic.moons[ o.now_idx ]
+
+      when 'J'
+        "#{ _.padStart o.now_idx, length, '0' }"
 
       when 'y', 'u'
-        "#{ _.padStart now_idx, length, '0' }年"
+        "#{ _.padStart o.now_idx, length, '0' }年"
 
       when 'd'
-        "#{ _.padStart now_idx + 1, length, '0' }日"
+        "#{ _.padStart o.now_idx + 1, length, '0' }日"
       when 's'
-        "#{ _.padStart now_idx, length, '0' }秒"
+        "#{ _.padStart o.now_idx, length, '0' }秒"
 
       when 'S'
-        "#{ now_idx / @calc.msec.second }"[2..]
+        "#{ o.now_idx / @calc.msec.second }"[2..]
 
   tempo_list: (tempos, token)->
     switch token[0]
@@ -546,27 +584,28 @@ K   = g.dic.axtial_tilt / 360
     @tempo_list @to_tempos(utc), token
 
   parse: (tgt, str = default_parse_format)->
-    { p,y,M,d,H,m,s,S } = @index tgt, str
+    { p,y,M,d,H,m,s,S, J } = @index tgt, str
 
-    in_period =
-      if @dic.leaps?
-        size =
-          @table.range.year[y] * @calc.msec.day
-        ( @table.msec.year[y - 1] || 0 ) +
-        ( @table.msec.month[size][M - 1] || 0 )
-      else
-        ( y * @calc.msec.year) +
-        ( M * @calc.msec.month )
+    if J
+      return @calc.zero.jd + J * @calc.msec.day 
 
-    @calc.zero.period +
-    ( p * @calc.msec.period ) +
-    in_period +
-    # dic.season
     ( d * @calc.msec.day ) +
     ( H * @calc.msec.hour ) +
     ( m * @calc.msec.minute ) +
     ( s * @calc.msec.second ) +
-    ( S )
+    ( S ) +
+    if @dic.leaps?
+      size =
+        @table.range.year[y] * @calc.msec.day
+
+      @calc.zero.period +
+      ( p * @calc.msec.period ) +
+      ( @table.msec.year[y - 1] || 0 ) +
+      ( @table.msec.month[size][M - 1] || 0 )
+    else
+      @calc.zero.season +
+      ( y * @calc.msec.year) +
+      ( M * @calc.msec.month )
 
   format: (utc, str = default_format_format)->
     o = @to_tempos utc
@@ -577,99 +616,5 @@ K   = g.dic.axtial_tilt / 360
       else
         token
     .join("")
-
-EARTH = [
-  [31556925147.0, new Date("2019/03/21 06:58").getTime()]
-  [ 2551442889.6, new Date("2019/01/06 10:28").getTime()]
-  [   86400000  , 0] # LOD ではなく、暦上の1日。Unix epoch では閏秒を消し去るため。
-  23.4397
-  [ 35, 135 ]
-]
-
-FancyDate.Gregorian = g = new FancyDate()
-  .planet ...EARTH
-  .calendar(
-    ["西暦", "紀元前"]
-    "1970年1月1日(木)0時0分0秒"
-    0
-    [4, 100, 400]
-  )
-  .yeary(
-    ['日','月','火','水','木','金','土']
-    [1..12].map (i)-> "#{i}月"
-    [31, 0,31,30,31,30,31,31,30,31,30,31]
-  )
-  .seasonly(
-    #   節    中     節    中     節    中 
-    ["立春","雨水","啓蟄","春分","清明","穀雨",
-     "立夏","小満","芒種","夏至","小暑","大暑",
-     "立秋","処暑","白露","秋分","寒露","霜降",
-     "立冬","小雪","大雪","冬至","小寒","大寒"]
-  )
-  .moony(
-    ['朔'  ,'既朔','三日月','上弦' ,'上弦','上弦' ,'上弦'  ,'上弦' ,'上弦'  ,'上弦' ,
-      '上弦','上弦','十三夜','小望月','満月','十六夜','立待月','居待月','臥待月','更待月',
-      '下限','下限','下限'  ,'下限' ,'下限','下限' ,'下限'  ,'下限' ,'晦'    ,'晦'  ]
-  )
-  .daily(
-    [0...24].map (i)-> "#{i}時"
-    [0...60].map (i)-> "#{i}分"
-  )
-  .init()
-
-FancyDate.平成 = g.dup()
-  .yeary(
-    ['月','火','水','木','金','土','日']
-  )
-  .calendar(
-    ["平成", "平成前"]
-    "1年1月8日(日)0時0分0秒"
-    new Date("1989-1-8").getTime()
-  )
-  .init()
-FancyDate.令和 = g.dup()
-  .yeary(
-    ['月','火','水','木','金','土','日']
-  )
-  .calendar(
-    ["令和", "令和前"]
-    "1年5月1日(水)0時0分0秒"
-    new Date("2019-5-1").getTime()
-  )
-  .init()
-
-FancyDate.平気法 = new FancyDate()
-  .planet ...EARTH
-  .calendar(
-    ["", "前"]
-    "1970年1月1日(木)0時0分0秒"
-    0
-    null
-  )
-  .yeary(
-    ["先勝","友引","先負","仏滅","大安","赤口"]
-    ['睦月','如月','弥生','卯月','皐月','水無月','文月','葉月','長月','神無月','霜月','師走']
-  )
-  .seasonly(
-    #   節    中     節    中     節    中 
-    ["立春","雨水","啓蟄","春分","清明","穀雨",
-     "立夏","小満","芒種","夏至","小暑","大暑",
-     "立秋","処暑","白露","秋分","寒露","霜降",
-     "立冬","小雪","大雪","冬至","小寒","大寒"]
-  )
-  .moony(
-    ['朔'  ,'既朔','三日月','上弦' ,'上弦','上弦' ,'上弦'  ,'上弦' ,'上弦'  ,'上弦' ,
-      '上弦','上弦','十三夜','小望月','満月','十六夜','立待月','居待月','臥待月','更待月',
-      '下限','下限','下限'  ,'下限' ,'下限','下限' ,'下限'  ,'下限' ,'晦'    ,'晦'  ]
-  )
-  .daily(
-    ['夜九つ','夜八つ','暁七つ',
-      '明六つ','朝五つ','昼四つ',
-      '昼九つ','昼八つ','夕七つ',
-      '暮六つ','宵五つ','夜四つ'
-    ]
-    ['一つ','二つ','三つ','四つ']
-  )
-  .init()
 
 module.exports = FancyDate

@@ -1,3 +1,5 @@
+require './fancy-date-sample'
+
 module.exports = {
   FancyDate: require "./fancy-date"
   ...require "./struct"
