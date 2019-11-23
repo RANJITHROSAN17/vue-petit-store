@@ -1,29 +1,5 @@
 FancyDate = require './fancy-date'
 
-地球 = [
-  [31556925147.0, new Date("2019/03/21 06:58").getTime()]
-  [ 2551442889.6, new Date("2019/01/06 10:28").getTime()]
-  [   86400000  , 0] # LOD ではなく、暦上の1日。Unix epoch では閏秒を消し去るため。
-  23.4397
-  [ 35, 135 ]
-]
-
-火星 = [
-  [59354347573.5373, new Date("2018/10/28 09:00").getTime()]
-  [ 2551442889.6,    new Date("2019/01/06 10:28").getTime()]
-  [   88775000  , 0] # 24時間39分35秒。
-  25.19
-  [ 35, 0 ]
-]
-
-FastEarth = [ # 天体が地球の百倍速のケース
-  [315569251.470, new Date("2019/03/21 06:58").getTime() / 100]
-  [ 25514428.896, new Date("2019/01/06 10:28").getTime() / 100]
-  [   864000    , 0] # LOD ではなく、暦上の1日。Unix epoch では閏秒を消し去るため。
-  23.4397
-  [ 35, 135 ]
-]
-
 十干 = [
   ["甲","きのえ"]
   ["乙","きのと"]
@@ -310,6 +286,15 @@ FastEarth = [ # 天体が地球の百倍速のケース
   ["令和",  1556712000000 - 75600000]
 ];
 
+
+地球 = [
+  [31556925147.0, new Date("2019/03/21 06:58").getTime()]
+  [ 2551442889.6, new Date("2019/01/06 10:28").getTime()]
+  [   86400000  , 0] # LOD ではなく、暦上の1日。Unix epoch では閏秒を消し去るため。
+  23.4397
+  [ 35, 135 ]
+]
+
 GREGORIO = 
   calendar: [
     "1970年1月1日(木)0時0分0秒"
@@ -363,6 +348,13 @@ GREGORIO =
     true
   ]
 
+FastEarth = [ # 天体が地球の百倍速のケース
+  [315569251.470, new Date("2019/03/21 06:58").getTime() / 100]
+  [ 25514428.896, new Date("2019/01/06 10:28").getTime() / 100]
+  [   864000    , 0] # LOD ではなく、暦上の1日。Unix epoch では閏秒を消し去るため。
+  23.4397
+  [ 35, 135 ]
+]
 
 FancyDate.Gregorian = g = new FancyDate()
   .planet   ...地球
@@ -375,28 +367,47 @@ FancyDate.Gregorian = g = new FancyDate()
   .daily    ...GREGORIO.daily
   .init()
 
-FancyDate.平気法 = new FancyDate()
+FancyDate.平気法 = FancyDate.Gregorian.dup()
   .planet   ...地球
   .calendar ...平気法.calendar
   .rolls    ...平気法.rolls
   .era "西暦", 元号
   .yeary    ...平気法.yeary
-  .seasonly ...GREGORIO.seasonly
-  .moony    ...GREGORIO.moony
   .daily    ...平気法.daily
   .init()
 
-FancyDate.Fast = new FancyDate()
+FancyDate.Fast = FancyDate.Gregorian.dup()
   .planet   ...FastEarth
-  .calendar ...GREGORIO.calendar
-  .rolls    ...GREGORIO.rolls
   .era "fast", 元号
-  .yeary    ...GREGORIO.yeary
-  .seasonly ...GREGORIO.seasonly
-  .moony    ...GREGORIO.moony
-  .daily    ...GREGORIO.daily
   .init()
 
-FancyDate.Mars = g.dup()
+
+火星 = [
+  [59354347573.5373, new Date("2018/10/28 09:00").getTime()]
+  [ 2551442889.6,    new Date("2019/01/06 10:28").getTime()] # ちょっと困ったので地球の月の値
+  [   88775000  , 0] # 24時間39分35秒。
+  25.19
+  [ 35, 0 ]
+]
+
+MARS_GREGORIO =
+  calendar: [
+    "1年1月1日(木)0時0分0秒"
+    g.parse "0年9月1日" # 春分が３月くらいになるよう、恣意的に決めました。
+    [1,2,10,100,300]
+  ]
+  yeary: [
+    [1..12].map (i)-> "#{i}月"
+  ]
+  daily: [
+    [0...24].map (i)-> "#{i}時"
+    [0...62].map (i)-> "#{i}分"
+  ]
+
+FancyDate.MarsGregorian = FancyDate.Gregorian.dup()
   .planet   ...火星
+  .calendar ...MARS_GREGORIO.calendar
+  .era "西暦"
+  .yeary    ...MARS_GREGORIO.yeary
+  .daily    ...MARS_GREGORIO.daily
   .init()

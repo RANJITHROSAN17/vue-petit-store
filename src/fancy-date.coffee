@@ -45,7 +45,6 @@ export class FancyDate
         eras: []
         divs: {}
         idx:  {}
-        gap:  {}
         zero: {}
         msec: {}
         range: {}
@@ -73,9 +72,6 @@ export class FancyDate
     @
 
   rolls: ( weeks = g.dic.weeks, etos = g.dic.etos )->
-    week  = daily_define  weeks.length * @calc.msec.day, @calc.msec.day
-    calc_set.call @, "range", { week }
-    calc_set.call @, "msec",  { week }
     Object.assign @dic, { weeks, etos }
     @
 
@@ -84,9 +80,6 @@ export class FancyDate
     @
 
   yeary: ( months = g.dic.months, month_ranges )->
-    month = daily_measure @calc.msec.year / months.length, @calc.msec.day
-    calc_set.call @, "range", { month }
-    calc_set.call @, "msec",  { month }
     Object.assign @dic, { months, month_ranges }
     @
 
@@ -95,24 +88,10 @@ export class FancyDate
     @
 
   seasonly: (seasons)->
-    season = sub_define @calc.msec.year, seasons.length
-    calc_set.call @, "range", { season }
-    calc_set.call @, "msec",  { season }
     Object.assign @dic, { seasons }
     @
 
   daily: (hours = g.dic.hours, minutes = g.dic.minutes, is_solor = false)->
-    hour   = sub_define @calc.msec.day,  hours.length
-    if is_solor
-      minute = sub_define      hour.msec,  minutes.length
-      second = sub_define    minute.msec,  minute.msec / 1000
-      calc_set.call @, "range", { hour, minute, second }
-      calc_set.call @, "msec",  { hour, minute, second }
-    else
-      minute = sub_define      hour.msec,  minutes.length
-      second = sub_define    minute.msec,  minute.msec / 1000
-      calc_set.call @, "range", { hour, minute, second }
-      calc_set.call @, "msec",  { hour, minute, second }
     Object.assign @dic, { hours, minutes, is_solor }
     @
 
@@ -121,6 +100,22 @@ export class FancyDate
     @
 
   init: ->
+    season = sub_define    @calc.msec.year, @dic.seasons.length
+    month  = daily_measure @calc.msec.year / @dic.months.length, @calc.msec.day
+    week   = daily_define  @dic.weeks.length * @calc.msec.day, @calc.msec.day
+
+    hour   = sub_define    @calc.msec.day, @dic.hours.length
+    if @dic.is_solor
+      minute = sub_define      hour.msec,  @dic.minutes.length
+      second = sub_define    minute.msec,  minute.msec / 1000
+      calc_set.call @, "range", { season, month, week, hour, minute, second }
+      calc_set.call @, "msec",  { season, month, week, hour, minute, second }
+    else
+      minute = sub_define      hour.msec,  @dic.minutes.length
+      second = sub_define    minute.msec,  minute.msec / 1000
+      calc_set.call @, "range", { season, month, week, hour, minute, second }
+      calc_set.call @, "msec",  { season, month, week, hour, minute, second }
+
     @def_table()
     Object.assign @calc.idx,  @def_idx()
     Object.assign @calc.zero, @def_zero()
@@ -273,6 +268,19 @@ export class FancyDate
 
     { period, era, week, season, moon, day, jd,ld,mjd }
 
+  precision: ->
+    gaps = [( @calc.msec.year / @calc.msec.day ) - @calc.range.year[0]]
+    if @dic.leaps
+      for v, idx in @dic.leaps
+        gap = gaps[gaps.length - 1]
+        if idx % 2
+          gap += 1 / v
+        else
+          gap -= 1 / v
+        gaps.push gap
+    minute: @calc.range.second
+    leap: gaps.map (i)=> parseInt 1 / i
+
 ###
 http://bakamoto.sakura.ne.jp/buturi/2hinode.pdf
 ベクトルで
@@ -340,7 +348,9 @@ K   = g.dic.axtial_tilt / 360
 
     日の出 = Math.floor 南中時刻 - 時角 * rad_to_day
     日の入 = Math.floor 南中時刻 + 時角 * rad_to_day
-    { 時角,方向, last_at, 真夜中,日の出,南中時刻,日の入, next_at }
+    { 
+      T0: [@calc.msec.year, @calc.zero.season, utc],
+      utc,idx,高度,K,lat,T1,南中差分A,南中差分B,  時角,方向, last_at, 真夜中,日の出,南中時刻,日の入, next_at }
 
   to_tempo_by_solor: (utc, day)->
     { 日の出, 南中時刻, 日の入 } = @solor utc, 2, day
@@ -406,7 +416,7 @@ K   = g.dic.axtial_tilt / 360
     Zz = to_tempo_bare @calc.msec.year, @calc.zero.season, utc # 太陽年
     Z  = drill_down Zz, "season" # 太陽年の二十四節気
 
-    # 正月中気
+    # 正月中気と正月
     N0_p = Zz.last_at + @calc.msec.season
     N0 = to_tempo_mod "moon", "day", N0_p
 
@@ -616,12 +626,12 @@ K   = g.dic.axtial_tilt / 360
     unless tempo = tempos[token[0]]
       throw new Error "request token can't tempos. [#{token}]"
 
-    { table, length, now_idx, last_at, size, gap } = tempo
+    { table, length, now_idx, last_at, size, zero } = tempo
     list = []
     if table
-      last_at = gap
+      last_at = zero
       for next_at, now_idx in table
-        next_at += gap
+        next_at += zero
         size = next_at - last_at
         list.push { now_idx, size, last_at, next_at, last_time: new Date(last_at), next_time: new Date(next_at) }
         last_at = next_at
@@ -629,8 +639,8 @@ K   = g.dic.axtial_tilt / 360
     if length
       base = last_at - size * now_idx
       for now_idx in [0...length]
-        last_at = (now_idx + 0) * size + gap
-        next_at = (now_idx + 1) * size + gap
+        last_at = (now_idx + 0) * size + zero
+        next_at = (now_idx + 1) * size + zero
         list.push { now_idx, size, last_at, next_at, last_time: new Date(last_at), next_time: new Date(next_at) }
     list
 
