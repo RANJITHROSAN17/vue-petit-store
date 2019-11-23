@@ -51,27 +51,27 @@ to_relative_time_distance = (msec)->
     return DISTANCES[idx]
   return DISTANCE_LONG_AGO
 
-to_tempo = (size, gap_str = "0s", write_at = new Date)->
+to_tempo = (size, zero_str = "0s", write_at = new Date)->
   size = to_msec size
-  gap   = to_msec(gap_str) + tempo_gap
-  to_tempo_bare size, gap, write_at - 0, 0
+  zero   = to_msec(zero_str) + tempo_zero
+  to_tempo_bare size, zero, write_at - 0, 0
 
-to_tempo_bare = (size, gap, write_at)->
-  now_idx = Math.floor(( write_at - gap) / size)
-  last_at = (now_idx + 0) * size + gap
-  next_at = (now_idx + 1) * size + gap
+to_tempo_bare = (size, zero, write_at)->
+  now_idx = Math.floor(( write_at - zero) / size)
+  last_at = (now_idx + 0) * size + zero
+  next_at = (now_idx + 1) * size + zero
   remain  =  next_at - write_at
   since   = write_at -  last_at
   timeout = remain
 
-  { last_at, write_at, next_at, timeout, now_idx, remain, since, gap, size }
+  { last_at, write_at, next_at, timeout, since, remain, zero, now_idx, size }
 
 ###
-to_tempo_by = (table, gap, write_at)->
-  scan_at = write_at - gap
+to_tempo_by = (table, zero, write_at)->
+  scan_at = write_at - zero
   if scan_at < 0
     now_idx = -1
-    next_at = gap
+    next_at = zero
     last_at = -Infinity
   else
     last_at = 0
@@ -83,22 +83,22 @@ to_tempo_by = (table, gap, write_at)->
 
     if last_at == next_at
       next_at = Infinity
-    next_at += gap
-    last_at += gap
+    next_at += zero
+    last_at += zero
 
   size   =  next_at -  last_at
   remain =  next_at - write_at
   since  = write_at -  last_at
   timeout = remain
 
-  { last_at, write_at, next_at, timeout, now_idx, remain, since, gap, size, scan_at, table }
+  { last_at, write_at, next_at, timeout, now_idx, remain, since, zero, size, scan_at, table }
 ###
 # バイナリサーチ 高速化はするが、微差なので複雑さのせいで逆に遅いかも？
-to_tempo_by = (table, gap, write_at)->
-  scan_at = write_at - gap
+to_tempo_by = (table, zero, write_at)->
+  scan_at = write_at - zero
   if scan_at < 0
     now_idx = -1
-    next_at = gap
+    next_at = zero
     last_at = -Infinity
   else
     top_idx = 0
@@ -113,15 +113,15 @@ to_tempo_by = (table, gap, write_at)->
 
     next_at = table[now_idx] || Infinity
     last_at = table[now_idx - 1] || 0
-    next_at += gap
-    last_at += gap
+    next_at += zero
+    last_at += zero
 
   size   =  next_at -  last_at
   remain =  next_at - write_at
   since  = write_at -  last_at
   timeout = remain
 
-  { last_at, write_at, next_at, timeout, now_idx, remain, since, gap, size, scan_at, table }
+  { last_at, write_at, next_at, timeout, now_idx, remain, since, zero, size, table }
 
 SECOND = to_msec  "1s"
 MINUTE = to_msec  "1m"
@@ -141,7 +141,7 @@ timezone =
   else
     TIMEZONE_OFFSET_JP
 
-tempo_gap = (- new Date(0).getDay() ) * DAY + timezone
+tempo_zero = (- new Date(0).getDay() ) * DAY + timezone
 
 TIMERS = [
   [ "年", "y", YEAR   ]

@@ -1,8 +1,32 @@
 { FancyDate, to_msec, to_tempo_bare } = require "../lib/index.min"
 { Gregorian, Mars, 平気法 } = FancyDate
+
+format = require "date-fns/format"
+locale = require "date-fns/locale/ja"
 _ = require 'lodash'
 
+
 g = Gregorian
+
+to_graph = (g, msec)->
+  { PI } = Math
+  deg_to_rad  = 2 * PI / 360
+  { 方向,時角, 真夜中,日の出,南中時刻,日の入 } = g.solor msec
+  "#{
+    format msec, "\t yyyy-MM-dd EE HH:mm", { locale }
+  }  真夜中.#{
+    format 真夜中, "HH:mm", { locale }
+  } 日の出.#{
+    format 日の出, "HH:mm", { locale }
+  } 南中時刻.#{
+    format 南中時刻, "HH:mm", { locale }
+  } 日の入.#{
+    format 日の入, "HH:mm", { locale }
+  } 方向.#{
+    Math.floor 方向 / deg_to_rad
+  } 時角.#{
+    Math.floor 時角 / deg_to_rad
+  }"
 
 ERAS = [
   ["大化",    1956842]
@@ -256,9 +280,6 @@ ERAS = [
 ]
 
 
-format = require "date-fns/format"
-locale = require "date-fns/locale/ja"
-
 moon_zero   = to_tempo_bare( g.calc.msec.moon,   g.calc.zero.moon,   new Date("2013-1-1") - 0 ).last_at
 season_zero = to_tempo_bare( g.calc.msec.season, g.calc.zero.season, new Date("2013-1-1") - 0 ).last_at
 list = []
@@ -301,8 +322,6 @@ mars_msecs = _.uniq list.sort()
 
 describe "define", =>
   test 'data', =>
-    expect g.calc
-    .toMatchSnapshot()
     expect g.calc.msec.period
     .toEqual 12622780800000
     expect g.table.msec.year[-1..]
@@ -311,27 +330,29 @@ describe "define", =>
   return
 
 describe "平気法", =>
-  test '太陽の動き', =>
-    dst = []
-    for msec in earth_msecs
-      { graph } = g.solor msec
-      dst.push "#{ format msec, "\t yyyy-MM-dd EE HH:mm", { locale } } #{ graph }"
-    expect dst
+  test 'calc', =>
+    expect 平気法.calc
     .toMatchSnapshot()
-    return
 
   test '二十四節季と月相', =>
     dst = []
     for msec in earth_msecs
-      dst.push "#{ 平気法.format msec, "\t GyMd E Hm", { locale } } #{ format msec, "\t yyyy-MM-dd EEE HH:mm", { locale } }"
+      dst.push "#{
+        平気法.format msec, "Gy年Mdd日 E Hm ssss秒"
+      } #{
+        format msec, "\tyyyy-MM-dd EEE HH:mm", { locale }
+      }"
     expect dst
     .toMatchSnapshot()
     return
   return
 
 describe "Gregorian", =>
+  test 'calc', =>
+    expect g.calc
+    .toMatchSnapshot()
   test 'format', =>
-    str = "GyMd(e)H Z"
+    str = "Gy年Md日(e)H Z"
     expect [
       g.format 100000000000000, str 
       g.format 10000000000000, str 
@@ -355,12 +376,13 @@ describe "Gregorian", =>
     return
 
   test 'parse → fomat cycle', =>
+    str = "Gy年Md日(e)Hms秒"
     expect [
-      g.format g.parse "1970年4月27日"
-      g.format g.parse "1973年3月3日"
-      g.format g.parse "2001年9月9日"
-      g.format g.parse "2286年11月21日"
-      g.format g.parse "5138年11月16日"
+      g.format g.parse("1970年4月27日"), str
+      g.format g.parse("1973年3月3日"), str
+      g.format g.parse("2001年9月9日"), str
+      g.format g.parse("2286年11月21日"), str
+      g.format g.parse("5138年11月16日"), str
     ].join("\n")
     .toEqual [
       "西暦1970年4月27日(月)0時0分0秒"
@@ -370,10 +392,24 @@ describe "Gregorian", =>
       "西暦5138年11月16日(水)0時0分0秒"
     ].join("\n")
     return
+  test '太陽の動き', =>
+    dst = []
+    for msec in earth_msecs
+      dst.push to_graph g, msec
+    expect dst
+    .toMatchSnapshot()
+    return
+
   test '二十四節季と月相', =>
     dst = []
     for msec in earth_msecs
-      dst.push "#{ g.format msec, "\t GyMd wE Hm", { locale } } #{ format msec, "\t yyyy-MM-dd ww-EEE HH:mm", { locale } }"
+      dst.push "#{
+        format msec, "yyyy-MM-dd", { locale }
+      }#{
+        format msec, " Y-ww-EEE", { locale }
+      }#{
+        g.format msec, " Y-ww-E Z Gy年Mdd日 Hm"
+      }"
     expect dst
     .toMatchSnapshot()
     return
@@ -396,8 +432,7 @@ describe "火星", =>
   test '太陽の動き', =>
     dst = []
     for msec in mars_msecs
-      { graph } = Mars.solor msec
-      dst.push "#{ format msec, "\t yyyy-MM-dd EE HH:mm", { locale } } #{ graph }"
+      dst.push to_graph Mars, msec
     expect dst
     .toMatchSnapshot()
     return

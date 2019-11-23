@@ -101,13 +101,19 @@ export class FancyDate
     Object.assign @dic, { seasons }
     @
 
-  daily: (hours = g.dic.hours, minutes = g.dic.minutes)->
+  daily: (hours = g.dic.hours, minutes = g.dic.minutes, is_solor = false)->
     hour   = sub_define @calc.msec.day,  hours.length
-    minute = sub_define      hour.msec,  minutes.length
-    second = sub_define    minute.msec,  minute.msec / 1000
-    calc_set.call @, "range", { hour, minute, second }
-    calc_set.call @, "msec",  { hour, minute, second }
-    Object.assign @dic, { hours, minutes }
+    if is_solor
+      minute = sub_define      hour.msec,  minutes.length
+      second = sub_define    minute.msec,  minute.msec / 1000
+      calc_set.call @, "range", { hour, minute, second }
+      calc_set.call @, "msec",  { hour, minute, second }
+    else
+      minute = sub_define      hour.msec,  minutes.length
+      second = sub_define    minute.msec,  minute.msec / 1000
+      calc_set.call @, "range", { hour, minute, second }
+      calc_set.call @, "msec",  { hour, minute, second }
+    Object.assign @dic, { hours, minutes, is_solor }
     @
 
   calendar: (start = g.dic.start, start_at = g.dic.start_at, leaps = null)->
@@ -225,8 +231,8 @@ export class FancyDate
 
   def_zero: ->
     zero_size = (path, idx = 0)=>
-      @dic.start_at - (@calc.idx[path] - idx) * @calc.msec[path]
-    zero   = @dic.start_at - @dic.start_at - @dic.tz_offset
+      0 - (@calc.idx[path] - idx) * @calc.msec[path]
+    zero   = @dic.start_at - @dic.tz_offset
     second = zero   + zero_size "second"
     minute = second + zero_size "minute"
     hour   = minute + zero_size "hour"
@@ -283,7 +289,7 @@ K   = g.dic.axtial_tilt / 360
 高度 = -50/60
 時角 = ( lat, 高度, 赤緯 )->
   acos(( sin(高度) - sin(lat/360) * sin(赤緯) ) / cos(lat/360) * cos(赤緯) )
-方向角 = ( lat, 高度, 赤緯, 時角 )->
+方向 = ( lat, 高度, 赤緯, 時角 )->
   acos(( cos(lat/360) * sin(赤緯) - sin(lat/360) * cos(赤緯) * cos(時角) ) / cos(高度) )
 季節 = 春分点からの移動角度
 赤緯 = asin( sin(K) * sin(季節) )
@@ -296,7 +302,7 @@ K   = g.dic.axtial_tilt / 360
   南中時刻 + 時角
 ###
 
-  solor: (utc, idx = 2)->
+  solor: (utc, idx = 2, { last_at, next_at } = to_tempo_bare @calc.msec.day, @calc.zero.day, utc )->
     days = [
         6      # golden hour end         / golden hour
       -18 / 60 # sunrise bottom edge end / sunset bottom edge start
@@ -309,18 +315,19 @@ K   = g.dic.axtial_tilt / 360
     deg_to_rad  = 2 * PI / 360
     year_to_rad = 2 * PI / @calc.msec.year
     rad_to_day  = @calc.msec.day / ( 2 * PI )
+    deg_to_day  = @calc.msec.day / 360
 
     高度 = days[idx]        * deg_to_rad
     K   = @dic.axtial_tilt * deg_to_rad
     lat = @dic.lat         * deg_to_rad
 
     T0  = to_tempo_bare @calc.msec.year, @calc.zero.season, utc
-    day = to_tempo_bare @calc.msec.day, -@dic.tz_offset,    utc
 
     # 南中差分の計算がテキトウになってしまった。あとで検討。
-    南中差分A = 2   * @calc.msec.day / 360 * sin(( T0.since              ) * year_to_rad     )
-    南中差分B = 2.5 * @calc.msec.day / 360 * sin(( T0.since + 1296000000 ) * year_to_rad * 2 )
-    南中時刻   = ( day.last_at + day.next_at ) / 2 + 南中差分A + 南中差分B
+    南中差分A = Math.floor 2   * deg_to_day * sin(( T0.since              ) * year_to_rad     )
+    南中差分B = Math.floor 2.5 * deg_to_day * sin(( T0.since + 1296000000 ) * year_to_rad * 2 )
+    南中時刻 = ( last_at + next_at ) / 2 + 南中差分A + 南中差分B
+    真夜中 = last_at + 南中差分A + 南中差分B
 
     T1 = to_tempo_bare @calc.msec.year, @dic.spring, 南中時刻
 
@@ -328,29 +335,39 @@ K   = g.dic.axtial_tilt / 360
     季節 = T1.since * year_to_rad
     赤緯 = asin( sin(K) * sin(季節) )
     赤経 = atan( tan(季節) * cos(K) )
-    時角 = acos(( sin(高度) - sin(lat) * sin(赤緯) ) / cos(lat) * cos(赤緯) )
+    時角 = acos(( sin(高度) - sin(lat) * sin(赤緯) ) / (cos(lat) * cos(赤緯)) )
+    方向 = acos(( cos(lat) * sin(赤緯) - sin(lat) * cos(赤緯) * cos(時角) ) / cos(高度) )
 
-    方向角 = acos(( cos(lat) * sin(赤緯) - sin(lat) * cos(赤緯) * cos(時角) ) / cos(高度) )
-    日の出 = 南中時刻 - 時角 * rad_to_day
-    日の入 = 南中時刻 + 時角 * rad_to_day
+    日の出 = Math.floor 南中時刻 - 時角 * rad_to_day
+    日の入 = Math.floor 南中時刻 + 時角 * rad_to_day
+    { 時角,方向, last_at, 真夜中,日の出,南中時刻,日の入, next_at }
 
-    graph = 
-      "  赤緯.#{
-        Math.floor 赤緯 / deg_to_rad 
-      }  赤経.#{
-        Math.floor 赤経 / deg_to_rad 
-      }  方向角.#{
-        Math.floor 方向角 / deg_to_rad
-      }  時角.#{
-        Math.floor 時角 / deg_to_rad
-      }  日の出.#{
-        @format 日の出, 'Hm'
-      }  南中時刻.#{
-        @format 南中時刻, 'Hm'
-      }  日の入.#{
-        @format 日の入, 'Hm'
-      }"
-    { 時角, 方向角, 南中時刻, 日の出, 日の入, graph }
+  to_tempo_by_solor: (utc, day)->
+    { 日の出, 南中時刻, 日の入 } = @solor utc, 2, day
+    size = @dic.hours.length / 4
+
+    list = []
+    next_at = 0
+    msec = ( 日の出 - day.last_at ) / size
+    for idx in [0        ... 1 * size]
+      next_at += msec
+      list.push Math.floor next_at
+
+    next_at = 日の出 - day.last_at
+    msec = ( 日の入 - 日の出 ) / ( 2 * size )
+    for idx in [1 * size ... 3 * size]
+      next_at += msec
+      list.push Math.floor next_at
+
+    next_at = day.size
+    msec = ( day.next_at - 日の入 ) / size
+
+    tails = []
+    for idx in [3 * size ... 4 * size]
+      tails.push Math.ceil next_at
+      next_at -= msec
+    list.push ...tails.reverse()
+    to_tempo_by list, day.last_at, utc
 
   to_tempos: (utc)->
     drill_down = (base, path, at = utc)=>
@@ -364,24 +381,30 @@ K   = g.dic.axtial_tilt / 360
       o.path = path
       o
 
-    to_tempo_mod = (path, sub, at = utc)=>
-      o = to_tempo_bare @calc.msec[path], @calc.zero[path], at
-      do2 = to_tempo_bare @calc.msec[sub], @calc.zero[sub], o.next_at
-      if do2.last_at <= at
-        do3 = to_tempo_bare @calc.msec[sub], @calc.zero[sub], o.next_at + o.size
-        o.now_idx += 1
-        o.last_at = do2.last_at
-        o.next_at = do3.last_at
+    to_tempo_mod = (path, sub, write_at = utc)=>
+      { now_idx, next_at, size, zero } = to_tempo_bare @calc.msec[path], @calc.zero[path], write_at
+      do2 = to_tempo_bare @calc.msec[sub], @calc.zero[sub], next_at
+      if do2.last_at <= write_at
+        do3 = to_tempo_bare @calc.msec[sub], @calc.zero[sub], next_at + size
+        now_idx += 1
+        last_at = do2.last_at
+        next_at = do3.last_at
+
       else
-        do1 = to_tempo_bare @calc.msec[sub], @calc.zero[sub], o.next_at - o.size
-        o.last_at = do1.last_at
-        o.next_at = do2.last_at
-      o
+        do1 = to_tempo_bare @calc.msec[sub], @calc.zero[sub], next_at - size
+        last_at = do1.last_at
+        next_at = do2.last_at
+      size   =  next_at -  last_at
+      remain =  next_at - write_at
+      since  = write_at -  last_at
+      timeout = remain
+      { last_at, write_at, next_at, timeout, since, remain, zero, now_idx, size }
 
     J = to_tempo_bare @calc.msec.day, @calc.zero.jd, utc # ユリウス日
 
     # season in year_of_planet
     Zz = to_tempo_bare @calc.msec.year, @calc.zero.season, utc # 太陽年
+    Z  = drill_down Zz, "season" # 太陽年の二十四節気
 
     # 正月中気
     N0_p = Zz.last_at + @calc.msec.season
@@ -406,23 +429,18 @@ K   = g.dic.axtial_tilt / 360
         when -1
           # 太陽年初に0月が出てしまう。昨年末にする。
           Nn.now_idx = @dic.months.length - 1
-          Zz.last_at -= @calc.msec.year
-          Zz.next_at -= @calc.msec.year
-          Zz.now_idx -= 1
+          Zz = to_tempo_bare Zz.size, Zz.zero + Zz.size, utc
         when @dic.months.length
           # 太陽年末に13月が出てしまう。年初にする。
           Nn.now_idx = 0
-          Zz.last_at += @calc.msec.year
-          Zz.next_at += @calc.msec.year
-          Zz.now_idx += 1
+          Zz = to_tempo_bare Zz.size, Zz.zero - Zz.size, utc
 
     N  = drill_down Nn, 'day'
 
     if @dic.leaps?
       p = to_tempo_bare @calc.msec.period, @calc.zero.period, utc
       u = drill_down p, "year"
-      u.now_idx = u.now_idx + p.now_idx * @calc.divs.period
-
+      u.now_idx += p.now_idx * @calc.divs.period
       M = drill_down u, "month"
       d = drill_down M, "day"
     else
@@ -430,27 +448,37 @@ K   = g.dic.axtial_tilt / 360
       M = Nn
       d = N
 
-    Z = drill_down Zz, "season" # 太陽年の二十四節気
-
     # day    in week (曜日)
     w0 = to_tempo_bare @calc.msec.week, @calc.zero.week ,u.last_at
     w = drill_down w0, "week"
-    if u.next_at < w.next_at
-      w.now_idx = 0
 
-    e  = E = drill_down w, "day"
+    Y =
+      now_idx: u.now_idx
+    if u.next_at < w.next_at
+      # 年末最終週は、翌年初週
+      Y.now_idx += 1
+      w.now_idx  = 0
+
+    e = E = drill_down w, "day"
     unless @dic.leaps?
       # 旧暦では、週は月初にリセットする。
       e.now_idx = ( M.now_idx + d.now_idx ) % @dic.weeks.length
 
     # day    in year appendix
     D = drill_down u, "day"
+    if @dic.is_solor
+      # hour   in day
+      H = @to_tempo_by_solor utc, d
+      size = H.size / @dic.minutes.length
+      m = to_tempo_bare size, H.last_at, utc
+      s = to_tempo_bare 1000, m.last_at, utc
+    else
+      # hour   in day
+      H = drill_down d, "hour"
+      m = drill_down H, "minute"
+      s = drill_down m, "second"
 
-    # hour   in day
-    H = drill_down d, "hour"
     # minute in day
-    m = drill_down H, "minute"
-    s = drill_down m, "second"
     now_idx = utc - s.last_at
     S = { now_idx }
 
@@ -466,9 +494,9 @@ K   = g.dic.axtial_tilt / 360
         G.label = era[0]
 
     y = Object.assign {}, u
-    if u.now_idx < 1
+    if y.now_idx < 1
       G.label = "紀元前"
-      y.now_idx = 1 - u.now_idx
+      y.now_idx = 1 - y.now_idx
 
     graph = "#{
       @dic.seasons[Z.now_idx]
@@ -489,7 +517,7 @@ K   = g.dic.axtial_tilt / 360
     }月#{
       _.padStart N.now_idx + 1, 2,'0'
     }日\t"
-    { G,u, y,M,d, D,w,e,E, H,m,s,S, Z,N, J, era, graph }
+    { G,u, y,M,d, D, Y,w,e,E, H,m,s,S, Z,N, J, era, graph }
 
   index: (tgt, str = default_parse_format)->
     tokens = str.match reg_token
@@ -562,20 +590,20 @@ K   = g.dic.axtial_tilt / 360
         @dic.moons[ o.now_idx ]
 
       when 'w'
-        "#{ _.padStart o.now_idx + 1, length, '0' }週"
+        "#{ _.padStart o.now_idx + 1, length, '0' }"
       when 'd'
-        "#{ _.padStart o.now_idx + 1, length, '0' }日"
+        "#{ _.padStart o.now_idx + 1, length, '0' }"
       when 'D'
-        "#{ _.padStart o.now_idx + 1, length, '0' }日"
+        "#{ _.padStart o.now_idx + 1, length, '0' }"
 
       when 'J'
         "#{ _.padStart o.now_idx, length, '0' }"
 
-      when 'y', 'u'
-        "#{ _.padStart o.now_idx, length, '0' }年"
+      when 'Y', 'y', 'u'
+        "#{ _.padStart o.now_idx, length, '0' }"
 
       when 's'
-        "#{ _.padStart o.now_idx, length, '0' }秒"
+        "#{ _.padStart o.now_idx, length, '0' }"
 
       when 'S'
         "#{ o.now_idx / @calc.msec.second }"[2..]

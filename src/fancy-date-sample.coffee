@@ -360,6 +360,7 @@ GREGORIO =
       '暮六つ','宵五つ','夜四つ'
     ]
     ['一つ','二つ','三つ','四つ']
+    true
   ]
 
 
@@ -378,7 +379,7 @@ FancyDate.平気法 = new FancyDate()
   .planet   ...地球
   .calendar ...平気法.calendar
   .rolls    ...平気法.rolls
-  .era "謎暦", 元号
+  .era "西暦", 元号
   .yeary    ...平気法.yeary
   .seasonly ...GREGORIO.seasonly
   .moony    ...GREGORIO.moony
