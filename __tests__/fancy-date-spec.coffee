@@ -255,6 +255,50 @@ ERAS = [
   ["令和",    2458605]
 ]
 
+
+format = require "date-fns/format"
+locale = require "date-fns/locale/ja"
+
+moon_zero   = to_tempo_bare( g.calc.msec.moon,   g.calc.zero.moon,   new Date("2013-1-1") - 0 ).last_at
+season_zero = to_tempo_bare( g.calc.msec.season, g.calc.zero.season, new Date("2013-1-1") - 0 ).last_at
+list = []
+for i in [0.. to_msec("20y") / g.calc.msec.moon]
+  msec = moon_zero + i * g.calc.msec.moon
+  { last_at, next_at } = to_tempo_bare to_msec("1d"), to_msec("15h"), msec
+  list.push last_at - 1
+  list.push last_at
+  list.push next_at - 1
+  list.push next_at
+for i in [0.. to_msec("20y") / g.calc.msec.season]
+  msec = season_zero + i * g.calc.msec.season
+  { last_at, next_at } = to_tempo_bare to_msec("1d"), to_msec("15h"), msec
+  list.push last_at - 1
+  list.push last_at
+  list.push next_at - 1
+  list.push next_at
+earth_msecs = _.sortedUniq list.sort()
+
+
+moon_zero   = to_tempo_bare( Mars.calc.msec.moon,   Mars.calc.zero.moon,   new Date("2013-1-1") - 0 ).last_at
+season_zero = to_tempo_bare( Mars.calc.msec.season, Mars.calc.zero.season, new Date("2013-1-1") - 0 ).last_at
+list = []
+for i in [0.. to_msec("20y") / Mars.calc.msec.moon]
+  msec = moon_zero + i * Mars.calc.msec.moon
+  { last_at, next_at } = to_tempo_bare Mars.calc.msec.day, msec
+  list.push last_at - 1
+  list.push last_at
+  list.push next_at - 1
+  list.push next_at
+for i in [0.. to_msec("20y") / Mars.calc.msec.season]
+  msec = season_zero + i * Mars.calc.msec.season
+  { last_at, next_at } = to_tempo_bare Mars.calc.msec.day, msec
+  list.push last_at - 1
+  list.push last_at
+  list.push next_at - 1
+  list.push next_at
+mars_msecs = _.uniq list.sort()
+
+
 describe "define", =>
   test 'data', =>
     expect g.calc
@@ -267,31 +311,9 @@ describe "define", =>
   return
 
 describe "平気法", =>
-  format = require "date-fns/format"
-  locale = require "date-fns/locale/ja"
-
-  moon_zero   = to_tempo_bare( 平気法.calc.msec.moon,   平気法.calc.zero.moon,   new Date("2013-1-1") - 0 ).last_at
-  season_zero = to_tempo_bare( 平気法.calc.msec.season, 平気法.calc.zero.season, new Date("2013-1-1") - 0 ).last_at
-  list = []
-  for i in [0.. to_msec("20y") / 平気法.calc.msec.moon]
-    msec = moon_zero + i * 平気法.calc.msec.moon
-    { last_at, next_at } = to_tempo_bare to_msec("1d"), to_msec("15h"), msec
-    list.push last_at - 1
-    list.push last_at
-    list.push next_at - 1
-    list.push next_at
-  for i in [0.. to_msec("20y") / 平気法.calc.msec.season]
-    msec = season_zero + i * 平気法.calc.msec.season
-    { last_at, next_at } = to_tempo_bare to_msec("1d"), to_msec("15h"), msec
-    list.push last_at - 1
-    list.push last_at
-    list.push next_at - 1
-    list.push next_at
-  list = _.uniq list.sort()
-
   test '太陽の動き', =>
     dst = []
-    for msec in list
+    for msec in earth_msecs
       { graph } = g.solor msec
       dst.push "#{ format msec, "\t yyyy-MM-dd EE HH:mm", { locale } } #{ graph }"
     expect dst
@@ -300,9 +322,8 @@ describe "平気法", =>
 
   test '二十四節季と月相', =>
     dst = []
-    for msec in list
-      { graph } = 平気法.to_tempos msec
-      dst.push "#{graph} #{ 平気法.format msec, "\t GyMd E Hm", { locale } } #{ format msec, "\t yyyy-MM-dd EEE HH:mm", { locale } }"
+    for msec in earth_msecs
+      dst.push "#{ 平気法.format msec, "\t GyMd E Hm", { locale } } #{ format msec, "\t yyyy-MM-dd EEE HH:mm", { locale } }"
     expect dst
     .toMatchSnapshot()
     return
@@ -310,16 +331,16 @@ describe "平気法", =>
 
 describe "Gregorian", =>
   test 'format', =>
-    format = "GyMd(e)H Z"
+    str = "GyMd(e)H Z"
     expect [
-      g.format 100000000000000, format
-      g.format 10000000000000, format
-      g.format new Date("2019-5-1").getTime(), format
-      g.format 1000000000000, format
-      g.format 100000000000, format
-      g.format 10000000000, format
-      g.format 0, format
-      g.format g.calc.zero.period, format
+      g.format 100000000000000, str 
+      g.format 10000000000000, str 
+      g.format new Date("2019-5-1").getTime(), str 
+      g.format 1000000000000, str 
+      g.format 100000000000, str 
+      g.format 10000000000, str 
+      g.format 0, str 
+      g.format g.calc.zero.period, str 
     ].join("\n")
     .toEqual [
       "西暦5138年11月16日(水)18時 立冬"
@@ -349,6 +370,13 @@ describe "Gregorian", =>
       "西暦5138年11月16日(水)0時0分0秒"
     ].join("\n")
     return
+  test '二十四節季と月相', =>
+    dst = []
+    for msec in earth_msecs
+      dst.push "#{ g.format msec, "\t GyMd wE Hm", { locale } } #{ format msec, "\t yyyy-MM-dd ww-EEE HH:mm", { locale } }"
+    expect dst
+    .toMatchSnapshot()
+    return
   return
 
 describe "JD", =>
@@ -364,31 +392,10 @@ describe "JD", =>
 
 describe "火星", =>
   return
-  format = require "date-fns/format"
-  locale = require "date-fns/locale/ja"
-
-  moon_zero   = to_tempo_bare( Mars.calc.msec.moon,   Mars.calc.zero.moon,   new Date("2013-1-1") - 0 ).last_at
-  season_zero = to_tempo_bare( Mars.calc.msec.season, Mars.calc.zero.season, new Date("2013-1-1") - 0 ).last_at
-  list = []
-  for i in [0.. to_msec("20y") / Mars.calc.msec.moon]
-    msec = moon_zero + i * Mars.calc.msec.moon
-    { last_at, next_at } = to_tempo_bare Mars.calc.msec.day, msec
-    list.push last_at - 1
-    list.push last_at
-    list.push next_at - 1
-    list.push next_at
-  for i in [0.. to_msec("20y") / Mars.calc.msec.season]
-    msec = season_zero + i * Mars.calc.msec.season
-    { last_at, next_at } = to_tempo_bare Mars.calc.msec.day, msec
-    list.push last_at - 1
-    list.push last_at
-    list.push next_at - 1
-    list.push next_at
-  list = _.uniq list.sort()
 
   test '太陽の動き', =>
     dst = []
-    for msec in list
+    for msec in mars_msecs
       { graph } = Mars.solor msec
       dst.push "#{ format msec, "\t yyyy-MM-dd EE HH:mm", { locale } } #{ graph }"
     expect dst
@@ -397,7 +404,7 @@ describe "火星", =>
 
   test '二十四節季と月相', =>
     dst = []
-    for msec in list
+    for msec in mars_msecs
       { graph } = Mars.to_tempos msec
       dst.push "#{graph} #{ Mars.format msec, "\t yMd E Hm", { locale } } #{ format msec, "\t yyyy-MM-dd EEE HH:mm", { locale } }"
     expect dst

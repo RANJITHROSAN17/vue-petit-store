@@ -63,8 +63,8 @@ export class FancyDate
     year   = daily_measure revolution, rotation
     moon   = daily_measure    synodic, rotation
     day    = daily_define    rotation, rotation
-    calc_set.call @, "range",    { year, moon, day }
-    calc_set.call @, "msec",     { year, moon, day }
+    calc_set.call @, "range", { year, moon, day }
+    calc_set.call @, "msec",  { year, moon, day }
 
     [lat, lng] = geo
     tz_offset = rotation / 360 * lng
@@ -72,17 +72,22 @@ export class FancyDate
     Object.assign @dic, { geo, lat, lng, axtial_tilt, spring, synodic_zero, rotation_zero, tz_offset }
     @
 
+  rolls: ( weeks = g.dic.weeks, etos = g.dic.etos )->
+    week  = daily_define  weeks.length * @calc.msec.day, @calc.msec.day
+    calc_set.call @, "range", { week }
+    calc_set.call @, "msec",  { week }
+    Object.assign @dic, { weeks, etos }
+    @
+
   era: ( era, eras = [] )->
-    eras = _.cloneDeep eras
     Object.assign @dic, { era, eras }
     @
 
-  yeary: ( weeks = g.dic.weeks, months = g.dic.months, month_ranges )->
+  yeary: ( months = g.dic.months, month_ranges )->
     month = daily_measure @calc.msec.year / months.length, @calc.msec.day
-    week  = daily_define  weeks.length * @calc.msec.day,   @calc.msec.day
-    calc_set.call @, "range",    { month, week }
-    calc_set.call @, "msec",     { month, week }
-    Object.assign @dic, { weeks, months, month_ranges }
+    calc_set.call @, "range", { month }
+    calc_set.call @, "msec",  { month }
+    Object.assign @dic, { months, month_ranges }
     @
 
   moony: (moons)->
@@ -91,8 +96,8 @@ export class FancyDate
 
   seasonly: (seasons)->
     season = sub_define @calc.msec.year, seasons.length
-    calc_set.call @, "range",    { season }
-    calc_set.call @, "msec",     { season }
+    calc_set.call @, "range", { season }
+    calc_set.call @, "msec",  { season }
     Object.assign @dic, { seasons }
     @
 
@@ -100,8 +105,8 @@ export class FancyDate
     hour   = sub_define @calc.msec.day,  hours.length
     minute = sub_define      hour.msec,  minutes.length
     second = sub_define    minute.msec,  minute.msec / 1000
-    calc_set.call @, "range",    { hour, minute, second }
-    calc_set.call @, "msec",     { hour, minute, second }
+    calc_set.call @, "range", { hour, minute, second }
+    calc_set.call @, "msec",  { hour, minute, second }
     Object.assign @dic, { hours, minutes }
     @
 
@@ -111,8 +116,8 @@ export class FancyDate
 
   init: ->
     @def_table()
-    calc_set.call @, "idx",  @def_idx()
-    calc_set.call @, "zero", @def_zero()
+    Object.assign @calc.idx,  @def_idx()
+    Object.assign @calc.zero, @def_zero()
 
     zero = @calc.zero.era
     list =
@@ -164,7 +169,7 @@ export class FancyDate
     year = upto range.year
     period = year[year.length - 1]
     period = daily_define period, day
-    calc_set.call @, "msec",     { period }
+    calc_set.call @, "msec", { period }
 
     month = {}
     for size in years
@@ -193,7 +198,8 @@ export class FancyDate
 
   def_idx: ->
     week = @dic.weeks.length
-    calc_set.call @, "divs", { week }
+    eto  = @dic.etos.length
+    Object.assign @calc.divs, { week, eto }
 
     [,year, month, day, week, hour, minute, second] = @dic.start.match reg_parse
     year   = year   - 0
@@ -202,6 +208,7 @@ export class FancyDate
     hour   = hour   - 0
     minute = minute - 0
     second = second - 0
+    eto    = 56
     week   = @dic.weeks.indexOf week
     season = @dic.seasons.indexOf '春分'
     moon   = 0
@@ -209,13 +216,12 @@ export class FancyDate
     if @dic.leaps?
       [..., full_period] = @dic.leaps
       period = full_period
-      calc_set.call @, "divs", { period }
+      Object.assign @calc.divs, { period }
 
       period = Math.floor year / @calc.divs.period
       year   = year % @calc.divs.period
-      { period, year, month, moon, week, day, hour, minute, second, season }
-    else
-      { year, month, moon, week, day, hour, minute, second, season }
+
+    { period, year, month, moon, week, eto, day, hour, minute, second, season }
 
   def_zero: ->
     zero_size = (path, idx = 0)=>
@@ -226,10 +232,6 @@ export class FancyDate
     hour   = minute + zero_size "hour"
     day    = hour   + zero_size "day", 1
     week   = day    + zero_size("week") / @calc.divs.week
-
-    # 元号
-    era = @dic.eras[0]?[1] || Infinity
-    @calc.eras = []
 
     # JD
     jd = -2440587.5 * @calc.msec.day
@@ -246,10 +248,15 @@ export class FancyDate
       year_size = @calc.msec.day * @table.range.year[ @calc.idx.year %% @calc.divs.period ]
 
       month  = day   - (@table.msec.month[year_size][ @calc.idx.month - 2 ] || 0)
-      year   = month - (@table.msec.year[         @calc.idx.year  - 1 ] || 0)
+      year   = month - (@table.msec.year[             @calc.idx.year  - 1 ] || 0)
       period = year  + zero_size "period"
 
       season += zero_size "period"
+
+    # 元号
+    era = @dic.eras[0]?[1] || Infinity
+    @calc.eras = []
+    if @dic.leaps?
       if period < era
         era = period + @table.msec.year[0]
         @calc.eras = [[@dic.era, era, 1]]
@@ -257,6 +264,7 @@ export class FancyDate
       if season < era
         era = season + @calc.msec.year
         @calc.eras = [[@dic.era, era, 1]]
+
     { period, era, week, season, moon, day, jd,ld,mjd }
 
 ###
@@ -380,7 +388,7 @@ K   = g.dic.axtial_tilt / 360
     N0 = to_tempo_mod "moon", "day", N0_p
 
     # 今月と中気
-    Nn = to_tempo_mod "moon", "day", utc
+    Nn = to_tempo_mod "moon", "day"
     Nn.now_idx -= N0.now_idx
     Nn_p = Zz.last_at + @calc.msec.season * ( 1 + Nn.now_idx * 2 )
 
@@ -398,18 +406,17 @@ K   = g.dic.axtial_tilt / 360
         when -1
           # 太陽年初に0月が出てしまう。昨年末にする。
           Nn.now_idx = @dic.months.length - 1
+          Zz.last_at -= @calc.msec.year
+          Zz.next_at -= @calc.msec.year
           Zz.now_idx -= 1
         when @dic.months.length
           # 太陽年末に13月が出てしまう。年初にする。
           Nn.now_idx = 0
+          Zz.last_at += @calc.msec.year
+          Zz.next_at += @calc.msec.year
           Zz.now_idx += 1
 
-    Z  = drill_down Zz, "season" # 太陽年の二十四節気
     N  = drill_down Nn, 'day'
-
-    # day    in week (曜日)
-    w = to_tempo_bare @calc.msec.week, @calc.zero.week,   utc
-    e = E = drill_down w,  "day"
 
     if @dic.leaps?
       p = to_tempo_bare @calc.msec.period, @calc.zero.period, utc
@@ -422,10 +429,21 @@ K   = g.dic.axtial_tilt / 360
       u = Zz
       M = Nn
       d = N
+
+    Z = drill_down Zz, "season" # 太陽年の二十四節気
+
+    # day    in week (曜日)
+    w0 = to_tempo_bare @calc.msec.week, @calc.zero.week ,u.last_at
+    w = drill_down w0, "week"
+    if u.next_at < w.next_at
+      w.now_idx = 0
+
+    e  = E = drill_down w, "day"
+    unless @dic.leaps?
       # 旧暦では、週は月初にリセットする。
       e.now_idx = ( M.now_idx + d.now_idx ) % @dic.weeks.length
 
-    #        in year appendix
+    # day    in year appendix
     D = drill_down u, "day"
 
     # hour   in day
@@ -435,6 +453,9 @@ K   = g.dic.axtial_tilt / 360
     s = drill_down m, "second"
     now_idx = utc - s.last_at
     S = { now_idx }
+
+    T =
+      label: [( u.now_idx + @calc.idx.eto )% 60]
 
     G = {}
     if @table.msec.era?
@@ -540,14 +561,19 @@ K   = g.dic.axtial_tilt / 360
       when 'N'
         @dic.moons[ o.now_idx ]
 
+      when 'w'
+        "#{ _.padStart o.now_idx + 1, length, '0' }週"
+      when 'd'
+        "#{ _.padStart o.now_idx + 1, length, '0' }日"
+      when 'D'
+        "#{ _.padStart o.now_idx + 1, length, '0' }日"
+
       when 'J'
         "#{ _.padStart o.now_idx, length, '0' }"
 
       when 'y', 'u'
         "#{ _.padStart o.now_idx, length, '0' }年"
 
-      when 'd'
-        "#{ _.padStart o.now_idx + 1, length, '0' }日"
       when 's'
         "#{ _.padStart o.now_idx, length, '0' }秒"
 

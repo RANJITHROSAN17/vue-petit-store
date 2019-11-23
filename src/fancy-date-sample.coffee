@@ -1,6 +1,6 @@
 FancyDate = require './fancy-date'
 
-EARTH = [
+地球 = [
   [31556925147.0, new Date("2019/03/21 06:58").getTime()]
   [ 2551442889.6, new Date("2019/01/06 10:28").getTime()]
   [   86400000  , 0] # LOD ではなく、暦上の1日。Unix epoch では閏秒を消し去るため。
@@ -8,7 +8,7 @@ EARTH = [
   [ 35, 135 ]
 ]
 
-MARS = [
+火星 = [
   [59354347573.5373, new Date("2018/10/28 09:00").getTime()]
   [ 2551442889.6,    new Date("2019/01/06 10:28").getTime()]
   [   88775000  , 0] # 24時間39分35秒。
@@ -24,7 +24,42 @@ FastEarth = [ # 天体が地球の百倍速のケース
   [ 35, 135 ]
 ]
 
-ERAS = [
+十干 = [
+  ["甲","きのえ"]
+  ["乙","きのと"]
+  ["丙","ひのえ"]
+  ["丁","ひのと"]
+  ["戊","つちのえ"]
+  ["己","つちのと"]
+  ["庚","かのえ"]
+  ["辛","かのと"]
+  ["壬","みずのえ"]
+  ["癸","みずのと"]
+]
+十二支 = [
+  ["子","ね"]
+  ["丑","うし"]
+  ["寅","とら"]
+  ["卯","う"]
+  ["辰","たつ"]
+  ["巳","み"]
+  ["午","うま"]
+  ["未","ひつじ"]
+  ["申","さる"]
+  ["酉","とり"]
+  ["戌","いぬ"]
+  ["亥","い"]
+]
+
+六十干支 =
+  for idx in [0...60]
+    a = 十干[idx % 十干.length] 
+    b = 十二支[idx % 十二支.length]
+    
+    year = idx + 1984
+    ["#{a[0]}#{b[0]}","#{"#{a[1].replace /と$/,"との" }#{b[1]}"}"]
+
+元号 = [# 号, 開始時刻
   ["大化", -41795611200000 - 75600000]
   ["白雉", -41647953600000 - 75600000]
   ["朱鳥", -40499352000000 - 75600000]
@@ -281,8 +316,11 @@ GREGORIO =
     0
     [4, 100, 400]
   ]
+  rolls: [
+    ['月','火','水','木','金','土','日']
+    六十干支
+  ]
   yeary: [
-    ['日','月','火','水','木','金','土']
     [1..12].map (i)-> "#{i}月"
     [31, 0,31,30,31,30,31,31,30,31,30,31]
   ]
@@ -308,8 +346,11 @@ GREGORIO =
     "1970年1月1日(木)0時0分0秒"
     0
   ]
-  yeary: [
+  rolls: [
     ["先勝","友引","先負","仏滅","大安","赤口"]
+    六十干支
+  ]
+  yeary: [
     ['睦月','如月','弥生','卯月','皐月','水無月','文月','葉月','長月','神無月','霜月','師走']
   ]
   daily: [
@@ -323,8 +364,9 @@ GREGORIO =
 
 
 FancyDate.Gregorian = g = new FancyDate()
-  .planet   ...EARTH
+  .planet   ...地球
   .calendar ...GREGORIO.calendar
+  .rolls    ...GREGORIO.rolls
   .era "西暦"
   .yeary    ...GREGORIO.yeary
   .seasonly ...GREGORIO.seasonly
@@ -333,9 +375,10 @@ FancyDate.Gregorian = g = new FancyDate()
   .init()
 
 FancyDate.平気法 = new FancyDate()
-  .planet   ...EARTH
+  .planet   ...地球
   .calendar ...平気法.calendar
-  .era "謎暦", ERAS
+  .rolls    ...平気法.rolls
+  .era "謎暦", 元号
   .yeary    ...平気法.yeary
   .seasonly ...GREGORIO.seasonly
   .moony    ...GREGORIO.moony
@@ -345,7 +388,8 @@ FancyDate.平気法 = new FancyDate()
 FancyDate.Fast = new FancyDate()
   .planet   ...FastEarth
   .calendar ...GREGORIO.calendar
-  .era "fast", ERAS
+  .rolls    ...GREGORIO.rolls
+  .era "fast", 元号
   .yeary    ...GREGORIO.yeary
   .seasonly ...GREGORIO.seasonly
   .moony    ...GREGORIO.moony
@@ -353,6 +397,5 @@ FancyDate.Fast = new FancyDate()
   .init()
 
 FancyDate.Mars = g.dup()
-  .planet   ...MARS
-  .calendar ...GREGORIO.calendar
+  .planet   ...火星
   .init()
