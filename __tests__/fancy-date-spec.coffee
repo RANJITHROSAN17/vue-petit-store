@@ -88,7 +88,7 @@ describe "平気法", =>
     expect 平気法.precision()
     .toEqual
       leap: [4]
-      minute: [1800]
+      minute: [3600]
 
   test '二十四節季と月相', =>
     dst = []
@@ -115,7 +115,7 @@ describe "Gregorian", =>
       minute: [60]
 
   test 'format', =>
-    str = "Gy年Md日(e)H Z"
+    str = "Gy年M月d日(E)H時 Z"
     expect [
       g.format 100000000000000, str 
       g.format 10000000000000, str 
@@ -139,7 +139,7 @@ describe "Gregorian", =>
     return
 
   test 'parse → fomat cycle', =>
-    str = "Gy年Md日(e)Hms秒"
+    str = "Gy年M月d日(E)H時m分s秒"
     expect [
       g.format g.parse("1970年4月27日"), str
       g.format g.parse("1973年3月3日"), str
@@ -171,7 +171,7 @@ describe "Gregorian", =>
       }#{
         format msec, " Y-ww-EEE", { locale }
       }#{
-        g.format msec, " Y-ww-E Z Gy年Mdd日 Hm"
+        g.format msec, " Y-ww-E Z Gy年M月dd日 H時m分"
       }"
     expect dst
     .toMatchSnapshot()
@@ -202,7 +202,7 @@ describe "火星", =>
     dst = []
     for msec in mars_msecs
       dst.push "#{
-        mg.format msec, "Z Gy年Mdd日 E Hm ssss秒"
+        mg.format msec, "Z Gy年M月dd日 E H時m分 ssss秒"
       } #{
         format msec, "\tyyyy-MM-dd EEE HH:mm", { locale }
       }"

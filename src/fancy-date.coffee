@@ -12,8 +12,8 @@ _ = require "lodash"
 
 reg_parse = /(\d+)年(\d+)月(\d+)日\(([^)])\)(\d+)時(\d+)分(\d+)秒/
 reg_token = /[yYQqMLwIdDecihHKkms]o|(\w)\1*|''|'(''|[^'])+('|$)|./g
-default_parse_format  = "yyyyMMdd"
-default_format_format = "GyMd(e)Hms"
+default_parse_format  = "y年M月d日"
+default_format_format = "Gy年M月d日(E)H時m分s秒"
 
 calc_set = (path, o)->
   for key, val of o
@@ -33,6 +33,27 @@ daily_measure = (msec, day)->
   range = [Math.floor(msec / day), Math.ceil(msec / day)]
   { range, msec }
 
+
+class Indexer
+  constructor: ( dic, code, label, @idx, list )->
+    @label = label
+    if list
+      if list.length
+        dic.list[code] = list
+        @list = list
+        @length = list.length
+      else
+        @length = list
+    else
+      
+
+  at: (idx)->
+    if @list
+      @list[ idx ]
+    else
+      idx
+
+
 export class FancyDate
   constructor: (o)->
     if o
@@ -40,7 +61,7 @@ export class FancyDate
       @dic  = _.cloneDeep dic
       @calc = _.cloneDeep calc
     else
-      @dic = {}
+      @dic = { list: {} }
       @calc =
         eras: []
         divs: {}
@@ -53,15 +74,17 @@ export class FancyDate
     new @constructor @
 
   planet: (
-    [ revolution = g.calc.msec.year, spring = g.dic.spring]
-    [ synodic    = g.calc.msec.moon, synodic_zero  = g.dic.synodic_zero ]
-    [ rotation   = g.calc.msec.day,  rotation_zero = g.dic.rotation_zero] 
-    axtial_tilt   = g.dic.axtial_tilt,
-    geo = g.dic.geo
+    [ revolution, spring ]
+    moon_args
+    [ rotation, rotation_zero ] 
+    axtial_tilt
+    geo
   )->
     year   = daily_measure revolution, rotation
-    moon   = daily_measure    synodic, rotation
     day    = daily_define    rotation, rotation
+    if moon_args
+      [ synodic, synodic_zero ] = moon_args
+      moon   = daily_measure    synodic, rotation
     calc_set.call @, "range", { year, moon, day }
     calc_set.call @, "msec",  { year, moon, day }
 
@@ -71,35 +94,72 @@ export class FancyDate
     Object.assign @dic, { geo, lat, lng, axtial_tilt, spring, synodic_zero, rotation_zero, tz_offset }
     @
 
-  rolls: ( weeks = g.dic.weeks, etos = g.dic.etos )->
-    Object.assign @dic, { weeks, etos }
-    @
-
   era: ( era, eras = [] )->
+    G = new Indexer @dic, 'G', '', 0, ["紀元前", ...eras.map(([s,])=> s)]
     Object.assign @dic, { era, eras }
     @
 
-  yeary: ( months = g.dic.months, month_ranges )->
-    Object.assign @dic, { months, month_ranges }
+  calendar: (start, start_at, leaps = null, month_divs = null )->
+    Object.assign @dic, { month_divs, leaps, start, start_at }
     @
 
-  moony: (moons)->
+  rolls: ( weeks, etos )->
+    weeks = new Indexer @dic, 'E',   ...weeks
+    etos  = new Indexer @dic, '干支', ...etos
+    Object.assign @dic, { weeks, etos }
+    @
+
+  yeary: ( months, days )->
+    months = new Indexer @dic, 'M', ...months
+    days   = new Indexer @dic, 'd', ...days
+    Object.assign @dic, { months, days }
+    @
+
+  moony: ( moons )->
+    moons = new Indexer @dic, 'N', ...moons
     Object.assign @dic, { moons }
     @
 
-  seasonly: (seasons)->
+  seasonly: ( seasons )->
+    seasons = new Indexer @dic, 'Z', ...seasons
     Object.assign @dic, { seasons }
     @
 
-  daily: (hours = g.dic.hours, minutes = g.dic.minutes, is_solor = false)->
-    Object.assign @dic, { hours, minutes, is_solor }
-    @
-
-  calendar: (start = g.dic.start, start_at = g.dic.start_at, leaps = null)->
-    Object.assign @dic, { leaps, start, start_at }
+  daily: (hours, minutes, seconds, is_solor = false)->
+    hours   = new Indexer @dic, 'H', ...hours
+    minutes = new Indexer @dic, 'm', ...minutes
+    seconds = new Indexer @dic, 's', ...seconds
+    Object.assign @dic, { hours, minutes, seconds, is_solor }
     @
 
   init: ->
+    G = (s, list)=> if ! list || idx = list.indexOf(s) < 0 then s - 0 else idx
+    Z = w = M = d = D = (s, list)=> if ! list || idx = list.indexOf(s) < 0 then s - 1 else idx
+    e = E = N = J = Y = y = u = H = m = s = S = (s)=> s - 0
+    @dic.indexer = { G, u,Y,y,M,d, H,m,s,S, e,E, Z,N, D,w,J }
+
+    at = (list, now_idx)->
+      if list
+        s = list[now_idx]
+        if s?
+          s
+
+    G = (o)-> o.label
+    M = (o, list, length)->
+      "#{
+        if o.is_leap
+          "閏"
+        else
+          ""
+      }#{ at( list, o.now_idx ) ? _.padStart o.now_idx + 1, length, '0' }"
+    Z = w = d = D =     (o, list, length)=> at( list, o.now_idx ) ? _.padStart o.now_idx + 1, length, '0'
+    H = m = e = E = N = (o, list, length)=> at( list, o.now_idx ) ? _.padStart o.now_idx, length, '0'
+    J = Y = y = u = s = (o, list, length)=> _.padStart o.now_idx, length, '0'
+    S = ( o, list, length )=>
+      "#{ o.now_idx / @calc.msec.second }"[2..]
+    @dic.labeler = { G, u,Y,y,M,d, H,m,s,S, e,E, Z,N, D,w,J }
+
+
     season = sub_define    @calc.msec.year, @dic.seasons.length
     month  = daily_measure @calc.msec.year / @dic.months.length, @calc.msec.day
     week   = daily_define  @dic.weeks.length * @calc.msec.day, @calc.msec.day
@@ -129,6 +189,19 @@ export class FancyDate
         msec - zero
     list.push Infinity
     @table.msec.era = list
+
+    G = (list)=> "(#{ list.join("|") })"
+    M = d = H = m = e = E = Z = N = (list)=>
+      if list
+        "(#{ list.join("|") })"
+      else
+        "(\\d+)"
+    D = w = u = Y = y = s = S = (list)=> "(\\d+)"
+    J = (list)=> "([\\d.]+)"
+
+    @dic.regex = {}
+    for key, f of { G, u,Y,y,M,d, H,m,s,S, e,E, Z,N, D,w,J }
+      @dic.regex[key] = f @dic.list[key]
     @
 
   def_table_by_leap_year: ->
@@ -151,19 +224,19 @@ export class FancyDate
     range.year[0] = @calc.range.year[1]
     years = _.uniq range.year
 
-    { month_ranges, months } = @dic
-    unless month_ranges
-      month_ranges =
+    { months, month_divs } = @dic
+    unless month_divs
+      month_divs =
         for str, idx in months
           @calc.range.month[1 - idx % 2]
-      month_ranges[1] = 0
+      month_divs[1] = 0
     month_sum = 0
-    for i in month_ranges
+    for i in month_divs
       month_sum += i
 
     range.month = {}
     for size in years
-      a = Array.from month_ranges
+      a = Array.from month_divs
       a[1] = size - month_sum
       range.month[size] = a
 
@@ -210,8 +283,8 @@ export class FancyDate
     minute = minute - 0
     second = second - 0
     eto    = 56
-    week   = @dic.weeks.indexOf week
-    season = @dic.seasons.indexOf '春分'
+    week   = @dic.weeks.idx
+    season = @dic.seasons.idx
     moon   = 0
 
     if @dic.leaps?
@@ -293,7 +366,7 @@ T = ( lat, 赤緯, 時角 )->
   e2 * (-cos(赤緯) * sin(時角)) +
   e3 * ( sin(lat/360) * sin(赤緯) + cos(lat/360) * cos(赤緯) * cos(時角) )
 
-K   = g.dic.axtial_tilt / 360
+K   = @dic.axtial_tilt / 360
 高度 = -50/60
 時角 = ( lat, 高度, 赤緯 )->
   acos(( sin(高度) - sin(lat/360) * sin(赤緯) ) / cos(lat/360) * cos(赤緯) )
@@ -509,7 +582,7 @@ K   = g.dic.axtial_tilt / 360
       y.now_idx = 1 - y.now_idx
 
     graph = "#{
-      @dic.seasons[Z.now_idx]
+      @dic.seasons.at Z.now_idx
     } #{
       if Z.now_idx % 2
         _.padStart ( Z.now_idx + 1 )/ 2, 2,'0'
@@ -530,93 +603,39 @@ K   = g.dic.axtial_tilt / 360
     { G,u, y,M,d, D, Y,w,e,E, H,m,s,S, Z,N, J, era, graph }
 
   index: (tgt, str = default_parse_format)->
-    tokens = str.match reg_token
-
-    reg = @parse_reg()
-    reg = "^" + tokens.map (token)->
-      if val = reg[token[0]]
-        val
-      else
-        token.replace(/([\\\[\]().*?])/g,"\\$1")
-    .join("")
-    idx = @parse_idx()
     p = y = M = d = H = m = s = S = J = 0
     data = { p,y,M,d,H,m,s,S, J }
-    for s, p in tgt.match(reg)[1..]
+
+    tokens = str.match reg_token
+    idx = @dic.indexer
+    reg = @regex tokens, str
+
+    items = tgt.match(reg)[1..]
+    for s, p in items
       token = tokens[p]
-      if val = idx[token[0]]
-        data[token[0]] = val s
+      if f = idx[token[0]]
+        data[token[0]] = f s, @dic.list[token[0]]
     if @dic.leaps?
       data.p = Math.floor( data.y / @calc.divs.period )
       data.y = data.y - data.p * @calc.divs.period
     data
 
-  parse_reg: ->
-    join = (list)->
-      "(#{ list.join("|") })"
-    G = join [@dic.era, "紀元前"]
-    y = "((?:\\d)+年)"
-    M = join @dic.months
-    d = "((?:\\d)+日)"
-    H = join @dic.hours
-    m = join @dic.minutes
-    s = "((?:\\d)+秒)"
-    S = "(\\d+)"
-    J = "([\\d.]+)"
-    { G, y,M,d, H,m,s,S, J }
+  regex: (tokens, str)->
+    { regex, list } = @dic
+    reg = "^" + tokens.map (token)=>
+      if val = regex[token[0]]
+        val
+      else
+        "(#{token.replace(/([\\\[\]().*?])/g,"\\$1")})"
+    .join("")
+    new RegExp reg
 
-  parse_idx: ->
-    G = (s)=> @dic.era.indexOf(s)
-    y = (s)=> s[..-2] - 0
-    M = (s)=> @dic.months.indexOf(s)
-    d = (s)=> s[..-2] - 1
-    H = (s)=> @dic.hours.indexOf(s)
-    m = (s)=> @dic.minutes.indexOf(s)
-    s = (s)=> s[..-2] - 0
-    S = (s)=> s[..-2] - 0
-    J = (s)=> s - 0
-    { G, y,M,d, H,m,s,S, J }
-
-  to_label: (o, token, length )->
-    switch token
-      when 'G'
-        o.label
-      when 'M'
-        "#{
-          if o.is_leap
-            "閏"
-          else
-            ""
-        }#{ @dic.months[ o.now_idx ] }"
-      when 'H'
-        @dic.hours[ o.now_idx ]
-      when 'm'
-        @dic.minutes[ o.now_idx ]
-      when 'e','E'
-        @dic.weeks[ o.now_idx ]
-      when 'Z'
-        @dic.seasons[ o.now_idx ]
-      when 'N'
-        @dic.moons[ o.now_idx ]
-
-      when 'w'
-        "#{ _.padStart o.now_idx + 1, length, '0' }"
-      when 'd'
-        "#{ _.padStart o.now_idx + 1, length, '0' }"
-      when 'D'
-        "#{ _.padStart o.now_idx + 1, length, '0' }"
-
-      when 'J'
-        "#{ _.padStart o.now_idx, length, '0' }"
-
-      when 'Y', 'y', 'u'
-        "#{ _.padStart o.now_idx, length, '0' }"
-
-      when 's'
-        "#{ _.padStart o.now_idx, length, '0' }"
-
-      when 'S'
-        "#{ o.now_idx / @calc.msec.second }"[2..]
+  to_label: ( o, token )->
+    if f = @dic.labeler[token[0]]
+      list = @dic.list[token[0]]
+      f o, list, token.length
+    else
+      token
 
   tempo_list: (tempos, token)->
     switch token[0]
@@ -676,7 +695,7 @@ K   = g.dic.axtial_tilt / 360
     str.match reg_token
     .map (token)=>
       if val = o[token[0]]
-        @to_label val, token[0], token.length
+        @to_label val, token
       else
         token
     .join("")
