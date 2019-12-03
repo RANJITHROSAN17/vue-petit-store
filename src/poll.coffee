@@ -1,4 +1,5 @@
 Mem = require 'memory-orm'
+{ to_tempo } = require "fancy-date"
 
 dexie = null
 poll_request = ->
@@ -10,8 +11,6 @@ poll_request = ->
     data: '&idx'
 
   poll_request = ->
-
-{ to_tempo } = require "./time"
 
 # has_last = {}
 

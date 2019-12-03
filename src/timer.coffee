@@ -1,16 +1,5 @@
 _ = require 'lodash'
-{ to_msec, to_tempo_bare, to_relative_time_distance } = require "./time"
-
-
-class Tempo
-  constructor: (...@args, @cb)->
-    @tempo = to_tempo @args[0], @args[1] || "0s", new Date 0
-
-  tick: ->
-    tempo = to_tempo ...@args
-    return if @tempo.now_idx == tempo.now_idx
-    @cb tempo
-    @tempo = tempo
+{ to_msec, to_tempo_bare, to_relative_time_distance } = require "fancy-date"
 
 
 time_base = (method)-> (id, { times })->

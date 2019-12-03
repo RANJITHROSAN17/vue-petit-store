@@ -1,7 +1,7 @@
 
 module.exports = {
+  ...require "fancy-date"
   ...require "./struct"
-  ...require "./time"
   ...require "./timer"
   ...require "./uri"
   ...require "./curtain"

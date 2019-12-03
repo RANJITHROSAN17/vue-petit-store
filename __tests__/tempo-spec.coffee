@@ -1,44 +1,4 @@
-{ Tempo, to_timer, to_msec, to_sec, to_relative_time_distance } = require "../lib/index.min"
-
-describe "Tempo", =>
-  test 'hourly', =>
-    t = new Tempo "1h", ->
-    expect t
-    .toMatchSnapshot()
-
-    t.tick()
-    expect t
-    .toMatchSnapshot()
-    return
-  test 'daily', =>
-    t = new Tempo "1d", ->
-    expect t
-    .toMatchSnapshot()
-
-    t.tick()
-    expect t
-    .toMatchSnapshot()
-    return
-  test 'daily same time', =>
-    t = new Tempo "1d", "15時40分", ->
-    expect t
-    .toMatchSnapshot()
-
-    t.tick()
-    expect t
-    .toMatchSnapshot()
-    return
-  test 'weekly same time', =>
-    t = new Tempo "1w", "1d", ->
-    expect t
-    .toMatchSnapshot()
-
-    t.tick()
-    expect t
-    .toMatchSnapshot()
-    return
-  return
-
+{ to_timer, to_msec, to_sec, to_relative_time_distance } = require "../lib/index.min"
 
 describe "to_relative_time_distance", =>
   test 'snapshot edge in 52bit', =>
