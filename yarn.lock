@@ -3446,10 +3446,10 @@ extsprintf@^1.2.0:
   resolved "https://registry.yarnpkg.com/extsprintf/-/extsprintf-1.4.0.tgz#e2689f8f356fad62cca65a3a91c5df5f9551692f"
   integrity sha1-4mifjzVvrWLMplo6kcXfX5VRaS8=
 
-fancy-date@^0.1.6:
-  version "0.1.6"
-  resolved "https://registry.yarnpkg.com/fancy-date/-/fancy-date-0.1.6.tgz#b9e4346900d0ef4156254f66133b37901c3a90f3"
-  integrity sha512-1i6YzZ+YTqw/WCUBcgNd0OXERqF4BceToVqfuzwa5N26P3pUizqmL9u0SXLGiz3qggtWySUeIORllmvsE6AVOw==
+fancy-date@^0.1.8:
+  version "0.1.8"
+  resolved "https://registry.yarnpkg.com/fancy-date/-/fancy-date-0.1.8.tgz#0d4ebfcbe7f4bd2bf8d1e1c8463f133ae751ffb1"
+  integrity sha512-Kj8CzDh9ltWnqZNIlMfADGAt0bOaNvfiYYXcdd8aDA4vQj9eiatpN828bUYalWM2i1LDGzDtVS/CgRRHXNx+OQ==
   dependencies:
     lodash "^4.17.15"
 
